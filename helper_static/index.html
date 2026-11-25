@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>首页 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <section class="card" id="account-card">
+        <div class="account-row">
+          <div>
+            <p class="muted small" style="margin:0 0 2px;">当前账号</p>
+            <p class="account-name" id="account-name">加载中…</p>
+          </div>
+          <div class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="/static/settings.html">账号设置</a>
+            <button class="btn btn-ghost btn-sm" type="button" id="logout-btn">退出登录</button>
+          </div>
+        </div>
+        <p class="notice" style="margin:16px 0 0;">
+          本工具仅用于记录号码、管理购彩预算、查询开奖与设置提醒，不涉及任何购彩交易。
+        </p>
+        <div class="form-error" id="load-error" role="alert" hidden></div>
+      </section>
+
+      <div class="banner-stack" id="upcoming-banner" aria-live="polite"></div>
+
+      <div class="grid">
+        <a class="tile" href="/static/games.html">
+          <h2 class="tile-title">游戏目录</h2>
+          <p class="tile-desc">浏览 16 款体彩与福彩游戏的规则、开奖节奏与数据状态。</p>
+          <span class="tile-tag">16 款游戏</span>
+        </a>
+        <a class="tile" href="/static/numbers.html">
+          <h2 class="tile-title">号码本</h2>
+          <p class="tile-desc">按游戏保存你选好的号码或投注内容，仅记录，不代购。</p>
+          <span class="tile-tag">记录工具</span>
+        </a>
+        <a class="tile" href="/static/budget.html">
+          <h2 class="tile-title">预算与支出</h2>
+          <p class="tile-desc">设置月度预算，记录实际支出，查看分游戏汇总。</p>
+          <span class="tile-tag">理性购彩</span>
+        </a>
+        <a class="tile" href="/static/draws.html">
+          <h2 class="tile-title">开奖查询</h2>
+          <p class="tile-desc">按游戏查询官方开奖号码或赛果，支持缓存刷新。</p>
+          <span class="tile-tag">官方数据</span>
+        </a>
+        <a class="tile" href="/static/check.html">
+          <h2 class="tile-title">兑奖核对</h2>
+          <p class="tile-desc">手动输入号码或赛果，按官方奖级规则核对是否中奖。</p>
+          <span class="tile-tag">仅作参考</span>
+        </a>
+        <a class="tile" href="/static/reminders.html">
+          <h2 class="tile-title">开奖提醒</h2>
+          <p class="tile-desc">按游戏开奖节奏设置提前提醒，避免错过开奖时间。</p>
+          <span class="tile-tag">提醒设置</span>
+        </a>
+        <a class="tile" href="/static/settings.html">
+          <h2 class="tile-title">账号设置</h2>
+          <p class="tile-desc">修改密码、导出个人数据，或删除账号与全部记录。</p>
+          <span class="tile-tag">数据管理</span>
+        </a>
+        <a class="tile" href="/static/compliance.html">
+          <h2 class="tile-title">合规与隐私</h2>
+          <p class="tile-desc">了解工具的功能边界、数据收集范围与年龄限制。</p>
+          <span class="tile-tag">18+</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script>
+    (function () {
+      mountShell("home");
+
+      var nameEl = document.getElementById("account-name");
+      var errorBox = document.getElementById("load-error");
+      var logoutBtn = document.getElementById("logout-btn");
+      var banner = document.getElementById("upcoming-banner");
+
+      logoutBtn.addEventListener("click", async function () {
+        logoutBtn.disabled = true;
+        try {
+          await api("/api/helper/auth/logout", { method: "POST" });
+        } catch (err) {
+          /* 令牌失效时也执行本地退出 */
+        }
+        clearToken();
+        window.location.href = "/login";
+      });
+
+      api("/api/helper/auth/me")
+        .then(function (data) {
+          nameEl.textContent = (data && data.user && data.user.username) || "未知用户";
+        })
+        .catch(function (err) {
+          nameEl.textContent = "未登录";
+          errorBox.textContent = err.message || "加载账号信息失败";
+          errorBox.hidden = false;
+        });
+
+      api("/api/helper/reminders/upcoming")
+        .then(function (items) {
+          if (!items || !items.length) return;
+          banner.innerHTML = items
+            .map(function (item) {
+              return (
+                '<div class="notice notice-info banner">' +
+                escapeHtml(item.message || item.game_name + " 即将开奖") +
+                ' <a class="banner-link" href="/static/reminders.html">查看提醒</a>' +
+                "</div>"
+              );
+            })
+            .join("");
+        })
+        .catch(function () {
+          /* 提醒横幅失败时静默，不影响首页 */
+        });
+    })();
+  </script>
+</body>
+</html>

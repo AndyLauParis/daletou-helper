@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>开奖提醒 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">开奖提醒</h1>
+      <p class="page-lead">按各游戏开奖节奏设置提前提醒；足彩与竞彩按赛程开奖，不展示固定倒计时。</p>
+      <p class="notice">
+        提醒仅在站内展示，不发送短信或其他推送；开奖节奏与时间以官方公告为准，如遇调整以官方为准。
+      </p>
+
+      <div id="upcoming-root" aria-live="polite" style="margin-bottom:16px;">
+        <div class="empty">正在检查最近的开奖提醒…</div>
+      </div>
+
+      <section class="card">
+        <h2 class="section-title">浏览器通知（可选）</h2>
+        <p class="hint" id="notify-status">浏览器通知需要你主动授权；未授权或浏览器不支持时，站内提醒仍然可用。</p>
+        <div class="row-actions" style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm" type="button" id="notify-btn">开启浏览器通知</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">全部游戏提醒</h2>
+        <div class="form-error" id="list-error" role="alert" hidden></div>
+        <div id="reminders-root" aria-live="polite">
+          <div class="empty">正在加载提醒设置…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/reminders.js"></script>
+</body>
+</html>

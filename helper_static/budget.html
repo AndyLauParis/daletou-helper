@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>预算与支出 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">预算与支出</h1>
+      <p class="page-lead">设置月度预算，手动记录各游戏的支出，查看汇总与超支提示。</p>
+      <p class="notice">
+        预算与支出仅做个人记账，不涉及充值、支付或下单；请理性购彩，量力而行。
+      </p>
+
+      <div class="grid">
+        <section class="card">
+          <h2 class="section-title">月度预算</h2>
+          <form id="budget-form" novalidate>
+            <div class="field">
+              <label for="monthly-budget">每月预算（元）</label>
+              <input id="monthly-budget" type="number" min="0" max="1000000" step="0.01"
+                     inputmode="decimal" placeholder="例如：300">
+              <p class="hint">范围 0–1,000,000 元，保留 2 位小数。设为 0 表示暂不设预算。</p>
+            </div>
+            <div class="form-error" id="budget-error" role="alert" hidden></div>
+            <div class="row-actions">
+              <button class="btn btn-primary" type="submit" id="budget-save">保存预算</button>
+              <span class="muted small" id="budget-updated"></span>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">记录支出</h2>
+          <form id="expense-form" novalidate>
+            <div class="field">
+              <label for="expense-game">游戏</label>
+              <select id="expense-game" required></select>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="expense-amount">金额（元）</label>
+                <input id="expense-amount" type="number" min="0.01" max="100000" step="0.01"
+                       inputmode="decimal" placeholder="例如：20" required>
+              </div>
+              <div class="field">
+                <label for="expense-date">日期</label>
+                <input id="expense-date" type="date" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="expense-note">备注（可选）</label>
+              <input id="expense-note" type="text" maxlength="200" placeholder="例如：周末机选">
+            </div>
+            <div class="form-error" id="expense-error" role="alert" hidden></div>
+            <div class="row-actions">
+              <button class="btn btn-primary" type="submit" id="expense-save">记录支出</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <section class="card" id="summary-card">
+        <div class="toolbar">
+          <div class="field">
+            <label for="summary-month">汇总月份</label>
+            <input id="summary-month" type="month">
+          </div>
+          <p class="muted small" id="summary-caption" style="margin:0 0 4px;">…</p>
+        </div>
+
+        <div class="form-error" id="summary-error" role="alert" hidden></div>
+        <div id="summary-root" aria-live="polite">
+          <div class="empty">正在加载预算汇总…</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">本月支出记录</h2>
+        <div class="form-error" id="list-error" role="alert" hidden></div>
+        <div id="expenses-root" aria-live="polite">
+          <div class="empty">正在加载支出记录…</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/budget.js"></script>
+</body>
+</html>

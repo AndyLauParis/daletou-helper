@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>兑奖核对 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">手动兑奖核对</h1>
+      <p class="page-lead">输入你票面上的号码或赛果选择，按官方奖级规则逐项核对；仅作参考，不自动兑奖。</p>
+
+      <p class="notice">
+        核对结果仅供参考，奖金与兑奖以官方公告及实体票为准；本工具不代购、不出票、不自动兑奖。
+      </p>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="field">
+            <label for="game-select">游戏</label>
+            <select id="game-select"></select>
+          </div>
+          <p class="meta-line" id="issue-hint" style="margin:0 0 4px;">当前核对以最新一期开奖为准。</p>
+        </div>
+
+        <form id="check-form" novalidate>
+          <div id="fields"></div>
+          <div class="form-error" id="form-error" role="alert" hidden></div>
+          <div class="row-actions">
+            <button class="btn btn-primary" type="submit" id="submit-btn">开始核对</button>
+            <button class="btn btn-ghost" type="button" id="reset-btn">清空输入</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="result-card" hidden>
+        <h2 class="section-title">核对结果</h2>
+        <div id="result-root" aria-live="polite"></div>
+      </section>
+
+      <p class="hint">
+        固定提示：核对结果仅供参考，奖金与兑奖以官方公告及实体票为准；本工具不代购、不出票、不自动兑奖。
+        请通过官方线下实体店兑奖，理性购彩。
+      </p>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/check.js"></script>
+</body>
+</html>

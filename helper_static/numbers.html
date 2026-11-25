@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>号码本 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">号码本</h1>
+      <p class="page-lead">按游戏记录你选好的号码或投注内容，仅记录，不代购、不出票。</p>
+      <p class="notice">
+        号码本只用于个人记录，不提供购买、预测或推荐号码入口；号码格式提示仅供参考，请以官方渠道为准。
+      </p>
+
+      <section class="card">
+        <h2 class="section-title" id="form-title">新增记录</h2>
+        <form id="record-form" novalidate>
+          <div class="form-row">
+            <div class="field">
+              <label for="game-code">游戏</label>
+              <select id="game-code" required></select>
+            </div>
+            <div class="field">
+              <label for="record-name">名称（可选）</label>
+              <input id="record-name" type="text" maxlength="60" placeholder="例如：周三一注">
+            </div>
+            <div class="field">
+              <label for="play-type">玩法（可选）</label>
+              <input id="play-type" type="text" maxlength="30" placeholder="例如：直选 / 组选3">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="payload">号码内容</label>
+            <textarea id="payload" rows="4"
+              placeholder='JSON 对象，或直接输入纯文本。例如：{"front": [1,2,3,4,5], "back": [1,2]}'></textarea>
+            <p class="hint">支持 JSON 对象或纯文本；纯文本会保存为 {"text": "…"}。格式不符合游戏规则时仍会保存并给出提示。</p>
+          </div>
+
+          <div class="form-error" id="form-error" role="alert" hidden></div>
+          <div class="form-warning" id="form-warning" role="status" hidden></div>
+
+          <div class="row-actions">
+            <button class="btn btn-primary" type="submit" id="save-btn">保存记录</button>
+            <button class="btn btn-ghost" type="button" id="cancel-btn" hidden>取消编辑</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="field">
+            <label for="filter-game">按游戏筛选</label>
+            <select id="filter-game"></select>
+          </div>
+          <div class="field">
+            <label for="filter-category">按类别筛选</label>
+            <select id="filter-category">
+              <option value="">全部类别</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filter-days">时间范围</label>
+            <select id="filter-days">
+              <option value="">全部时间</option>
+              <option value="7">最近 7 天</option>
+              <option value="30">最近 30 天</option>
+              <option value="90">最近 90 天</option>
+            </select>
+          </div>
+          <p class="muted small" id="list-count" style="margin:0 0 4px;">正在加载…</p>
+        </div>
+
+        <div class="form-error" id="list-error" role="alert" hidden></div>
+        <div id="records-root" aria-live="polite">
+          <div class="empty">正在加载号码记录…</div>
+        </div>
+        <div class="row-actions" id="more-wrap" hidden style="margin-top:12px;">
+          <button class="btn btn-ghost btn-sm" type="button" id="more-btn">加载更多</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/numbers.js"></script>
+</body>
+</html>

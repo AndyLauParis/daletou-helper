@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>注册 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container narrow">
+      <section class="card auth-card">
+        <h1 class="page-title">创建账号</h1>
+        <p class="page-lead">仅需用户名与密码，不收集真实姓名、身份证、手机号或银行卡信息。</p>
+
+        <form id="register-form" novalidate>
+          <div class="field">
+            <label for="username">用户名</label>
+            <input id="username" name="username" type="text" autocomplete="username"
+                   autocapitalize="none" spellcheck="false" maxlength="32" required>
+            <p class="muted small">3–32 位字母、数字、下划线或中文。</p>
+          </div>
+          <div class="field">
+            <label for="password">密码</label>
+            <input id="password" name="password" type="password"
+                   autocomplete="new-password" maxlength="128" required>
+            <p class="muted small">至少 8 位，最多 128 位。</p>
+          </div>
+          <div class="field">
+            <label for="password2">确认密码</label>
+            <input id="password2" name="password2" type="password"
+                   autocomplete="new-password" maxlength="128" required>
+          </div>
+
+          <div class="field">
+            <label class="checkbox-row" for="is-adult">
+              <input id="is-adult" name="is_adult" type="checkbox" required>
+              <span>我已满 18 周岁，已阅读并同意合规声明：本工具仅提供记录、查询与提醒，不代购、不支付、不出票、不承诺中奖。</span>
+            </label>
+          </div>
+
+          <div class="form-error" id="form-error" role="alert" hidden></div>
+
+          <button class="btn btn-primary btn-block" type="submit" id="submit-btn">注册并登录</button>
+        </form>
+
+        <p class="auth-switch muted">已有账号？<a href="/login">去登录</a></p>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script>
+    (function () {
+      mountShell("");
+
+      var form = document.getElementById("register-form");
+      var errorBox = document.getElementById("form-error");
+      var submitBtn = document.getElementById("submit-btn");
+      var usernameRe = /^[A-Za-z0-9_\u4e00-\u9fa5]{3,32}$/;
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+      }
+
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        errorBox.hidden = true;
+
+        var username = document.getElementById("username").value.trim();
+        var password = document.getElementById("password").value;
+        var password2 = document.getElementById("password2").value;
+        var isAdult = document.getElementById("is-adult").checked;
+
+        if (!usernameRe.test(username)) {
+          showError("用户名需为 3–32 位字母、数字、下划线或中文");
+          return;
+        }
+        if (password.length < 8 || password.length > 128) {
+          showError("密码长度需为 8–128 位");
+          return;
+        }
+        if (password !== password2) {
+          showError("两次输入的密码不一致");
+          return;
+        }
+        if (!isAdult) {
+          showError("请先勾选“我已满 18 周岁并已阅读合规声明”");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "注册中…";
+        try {
+          var data = await api("/api/helper/auth/register", {
+            method: "POST",
+            body: JSON.stringify({
+              username: username,
+              password: password,
+              is_adult: true
+            })
+          });
+          setToken(data.token);
+          window.location.href = "/";
+        } catch (err) {
+          showError(err.message || "注册失败，请稍后重试");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "注册并登录";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="大乐透三大模型数学验证实验室：期望与凯利、全包号、倍投策略、历史数据检验。不预测号码，不推荐投注。">
+  <title>大乐透三大模型 · 数据实验室</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20261124">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="章节导航">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">DLT</span>
+        <div>
+          <p class="brand-title">大乐透 · 数据实验室</p>
+          <p class="brand-sub">三大模型数学验证</p>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav" aria-label="页面章节">
+        <button type="button" class="nav-item is-active" data-target="overview" aria-current="true">
+          <span class="nav-idx">01</span><span class="nav-label">概览</span>
+        </button>
+        <button type="button" class="nav-item" data-target="model1">
+          <span class="nav-idx">02</span><span class="nav-label">模型一 · 期望与凯利</span>
+        </button>
+        <button type="button" class="nav-item" data-target="model2">
+          <span class="nav-idx">03</span><span class="nav-label">模型二 · 全包号</span>
+        </button>
+        <button type="button" class="nav-item" data-target="model3">
+          <span class="nav-idx">04</span><span class="nav-label">模型三 · 倍投</span>
+        </button>
+        <button type="button" class="nav-item" data-target="history">
+          <span class="nav-idx">05</span><span class="nav-label">历史检验</span>
+        </button>
+        <button type="button" class="nav-item" data-target="conclusion">
+          <span class="nav-idx">06</span><span class="nav-label">结语</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <p class="sidebar-note-title">本地数据实验室</p>
+        <p>不预测号码 · 不推荐投注 · 无购彩入口</p>
+        <p class="mono sidebar-note-meta">LOCAL LAB / 2026</p>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <header class="topbar" aria-label="数据状态">
+        <div class="status-strip">
+          <div class="status-item">
+            <span class="status-key">数据期数</span>
+            <strong class="status-value mono" id="status-count">—</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-key">最新期号</span>
+            <strong class="status-value mono" id="status-issue">—</strong>
+            <span class="status-sub mono" id="status-date">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-key">最新奖池</span>
+            <strong class="status-value mono" id="status-pool">—</strong>
+          </div>
+          <div class="status-item status-item--source">
+            <span class="status-key">数据源</span>
+            <span class="badge" id="status-source">等待数据</span>
+          </div>
+          <div class="status-actions">
+            <span class="status-sub mono" id="status-fetched">尚未同步</span>
+            <button type="button" class="btn btn--ghost" id="refresh-btn">
+              <span class="btn-dot" aria-hidden="true"></span><span id="refresh-label">刷新数据</span>
+            </button>
+          </div>
+        </div>
+        <div class="global-alert" id="global-alert" role="alert" hidden></div>
+      </header>
+
+      <!-- 01 概览 -->
+      <section class="section is-active" id="overview" aria-labelledby="overview-title">
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">01</span> OVERVIEW / 结论先行</p>
+          <h1 id="overview-title">三个模型，<br>同一个答案。</h1>
+          <p class="lede">把视频里的三种“手搓头奖”思路拆成可调参数、可复现的数学实验。参数可以变，结论不变：<strong>大乐透是负期望游戏，最优策略是不买；要买，只当娱乐。</strong></p>
+        </header>
+
+        <div class="verdict-grid" aria-label="三模型结论">
+          <article class="verdict-card verdict-card--red">
+            <p class="verdict-tag">模型一 · 期望与凯利</p>
+            <h2 class="verdict-word">不投</h2>
+            <p class="verdict-basis">单注期望为负，凯利最优仓位被钳制在 0；任何正仓位都让长期对数增长率为负。</p>
+          </article>
+          <article class="verdict-card verdict-card--amber">
+            <p class="verdict-tag">模型二 · 全包号</p>
+            <h2 class="verdict-word">不适用</h2>
+            <p class="verdict-basis">全包成本约 4285 万元，盈亏平衡头奖高于单注封顶；买下全部号码也无法稳定盈利。</p>
+          </article>
+          <article class="verdict-card verdict-card--red">
+            <p class="verdict-tag">模型三 · 倍投</p>
+            <h2 class="verdict-word">必亏</h2>
+            <p class="verdict-basis">倍投只改变亏损路径，不改变期望；有限本金下，破产概率随轮数趋近 1。</p>
+          </article>
+        </div>
+
+        <div class="section-subhead">
+          <h2>关键数字</h2>
+          <p>全部由当前官方规则计算，页面内可逐项复算。</p>
+        </div>
+        <div class="metric-grid metric-grid--six">
+          <article class="metric">
+            <p class="metric-label">总组合数</p>
+            <p class="metric-value mono" id="key-total-combos">21,425,712</p>
+            <p class="metric-note">C(35,5) × C(12,2)</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">头奖概率</p>
+            <p class="metric-value mono metric-value--small" id="key-jackpot-prob">1 / 21,425,712</p>
+            <p class="metric-note">约 4.667×10⁻⁸</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">中奖组合</p>
+            <p class="metric-value mono" id="key-win-combos">1,429,197</p>
+            <p class="metric-note">覆盖 7 个奖级</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">任意奖级中奖率</p>
+            <p class="metric-value mono" id="key-any-rate">6.67%</p>
+            <p class="metric-note">中奖组合 / 总组合</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">奖金计提</p>
+            <p class="metric-value mono" id="key-return-rate">51%</p>
+            <p class="metric-note">当期奖金 49% + 调节基金 2%</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">单注价格</p>
+            <p class="metric-value mono" id="key-ticket-price">2 元</p>
+            <p class="metric-note">追加投注另计 1 元</p>
+          </article>
+        </div>
+
+        <div class="split split--draw">
+          <article class="card draw-card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">最新一期</p>
+                <h2 class="card-title">第 <span class="mono" id="latest-issue">—</span> 期</h2>
+              </div>
+              <p class="card-meta mono" id="latest-date">—</p>
+            </div>
+            <div class="ball-row" aria-label="最新开奖号码">
+              <div class="ball-group" id="latest-front" aria-label="前区号码"></div>
+              <span class="ball-sep" aria-hidden="true">+</span>
+              <div class="ball-group" id="latest-back" aria-label="后区号码"></div>
+            </div>
+            <dl class="mini-stats">
+              <div><dt>奖池</dt><dd class="mono" id="latest-pool">—</dd></div>
+              <div><dt>前区</dt><dd>5 / 35</dd></div>
+              <div><dt>后区</dt><dd>2 / 12</dd></div>
+            </dl>
+            <p class="card-foot" id="data-span-note">正在读取历史数据…</p>
+          </article>
+
+          <article class="card coin-card">
+            <p class="card-kicker">概率直觉对照</p>
+            <h2 class="card-title">连抛 24 次硬币，全部正面</h2>
+            <p class="coin-prob mono" id="coin-24-prob">1 / 16,777,216</p>
+            <p class="coin-copy">头奖概率约等于连续抛硬币 <strong class="mono" id="coin-count">24.35</strong> 次全部正面。区别是：硬币没有奖池，彩票有 49% 的钱被抽走。</p>
+            <div class="coin-bars" aria-hidden="true">
+              <span class="coin-bar coin-bar--teal" style="--w:100%"></span>
+              <span class="coin-bar coin-bar--amber" id="coin-bar-jackpot"></span>
+            </div>
+            <div class="coin-legend">
+              <span><i class="dot dot--teal"></i>24 次正面</span>
+              <span><i class="dot dot--amber"></i>头奖</span>
+            </div>
+            <p class="card-foot">两者同一量级；把“差一点”当成“快中了”，是把随机波动误读成规律。</p>
+          </article>
+        </div>
+
+        <p class="overview-disclaimer">本页所有计算均基于公开历史数据与当前规则，不构成投注建议。历史开奖相互独立，过去结果不影响未来。</p>
+      </section>
+
+      <!-- 02 模型一 -->
+      <section class="section" id="model1" aria-labelledby="model1-title" hidden>
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">02</span> MODEL 01 / 期望与凯利</p>
+          <h2 id="model1-title">期望值决定方向，凯利决定仓位。</h2>
+          <p class="lede">把每一个奖级的“概率 × 奖金”加总，得到单注期望；再把期望放进凯利公式，得到长期增长最快的下注比例。答案不是“买多少”，而是“不要下注”。</p>
+        </header>
+
+        <div class="section-alert" data-alert="model1" hidden></div>
+
+        <div class="card control-card">
+          <div class="control-grid">
+            <div class="field">
+              <label for="m1-jackpot">头奖（万元）</label>
+              <input type="number" id="m1-jackpot" value="500" min="0" max="100000" step="10" inputmode="decimal">
+              <p class="field-hint">默认 500 万元，用于复现视频口径。</p>
+            </div>
+            <div class="field">
+              <label for="m1-second">二等奖（万元）</label>
+              <input type="number" id="m1-second" value="10" min="0" max="10000" step="1" inputmode="decimal">
+              <p class="field-hint">单注二等奖金额。</p>
+            </div>
+            <div class="field">
+              <label for="m1-pool">奖池档位</label>
+              <select id="m1-pool">
+                <option value="auto" selected>自动（跟随最新奖池）</option>
+                <option value="normal">正常档（&lt; 8 亿）</option>
+                <option value="high">高档（≥ 8 亿）</option>
+              </select>
+              <p class="field-hint">奖池 ≥ 8 亿时固定奖上调。</p>
+            </div>
+            <div class="field">
+              <label for="m1-mode">计算口径</label>
+              <select id="m1-mode">
+                <option value="rules" selected>当前规则（7 奖级）</option>
+                <option value="video">视频口径（51% / 500 万）</option>
+              </select>
+              <p class="field-hint">两套口径的结论一致：期望为负。</p>
+            </div>
+          </div>
+          <p class="compute-state" id="m1-state" aria-live="polite">等待计算</p>
+        </div>
+
+        <div class="metric-grid metric-grid--four">
+          <article class="metric metric--emphasis">
+            <p class="metric-label">单注期望（显示口径）</p>
+            <p class="metric-value mono" id="m1-ev">—</p>
+            <p class="metric-note" id="m1-ev-note">每投入 2 元的平均回报</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">返奖率（显示口径）</p>
+            <p class="metric-value mono" id="m1-payout">—</p>
+            <p class="metric-note">奖金 / 投注额</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">凯利仓位 f*（钳制后）</p>
+            <p class="metric-value mono" id="m1-fstar">—</p>
+            <p class="metric-note">max(0, f*) 才是可执行仓位</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">未钳制 f*</p>
+            <p class="metric-value mono metric-value--small" id="m1-fraw">—</p>
+            <p class="metric-note">负值意味着反向下注才“公平”</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">p · b</p>
+            <p class="metric-value mono" id="m1-pb">—</p>
+            <p class="metric-note">p 头奖概率，b 净赔率</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">临界头奖</p>
+            <p class="metric-value mono" id="m1-critical">—</p>
+            <p class="metric-note">f* &gt; 0 所需的最低头奖</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">单注头奖封顶</p>
+            <p class="metric-value mono" id="m1-cap">—</p>
+            <p class="metric-note">基本 / 追加</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">临界倍数</p>
+            <p class="metric-value mono" id="m1-multiple">—</p>
+            <p class="metric-note">临界头奖 ÷ 单注封顶</p>
+          </article>
+        </div>
+
+        <div class="verdict-line" id="m1-verdict" role="status">等待模型结果…</div>
+
+        <div class="split split--wide">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">7 奖级概率表</p>
+                <h2 class="card-title">每个奖级的真实概率</h2>
+              </div>
+              <p class="card-meta mono" id="m1-mode-note">—</p>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">奖级</th>
+                    <th scope="col">中奖条件</th>
+                    <th scope="col" class="num">组合数</th>
+                    <th scope="col" class="num">概率</th>
+                    <th scope="col" class="num">单注奖金</th>
+                    <th scope="col" class="num">期望贡献</th>
+                  </tr>
+                </thead>
+                <tbody id="m1-tier-body">
+                  <tr><td colspan="6" class="table-empty">等待规则数据…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="chart chart--tier" id="chart-m1-tier" role="img" aria-label="七个奖级中奖概率的对数柱状图"></div>
+            <p class="chart-caption">横轴为对数刻度：一等奖概率约 1/2142 万，七等奖约 6.01%，相差五个数量级。</p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">对数增长曲线</p>
+                <h2 class="card-title">g(f)：下注比例与长期增长</h2>
+              </div>
+              <span class="badge badge--teal">f = 0 时 g = 0</span>
+            </div>
+            <div class="chart chart--growth" id="chart-m1-growth" role="img" aria-label="凯利对数增长曲线，横轴为下注比例，纵轴为长期对数增长率"></div>
+            <p class="chart-caption">曲线在 f = 0 处达到最大值 0；任何正仓位都位于负增长区。标记线为 0.1% / 1% / 5% / 50% / 100%。</p>
+          </article>
+        </div>
+
+        <details class="formula">
+          <summary>公式与推导</summary>
+          <div class="formula-body">
+            <div class="formula-block">
+              <p class="formula-label">凯利公式</p>
+              <p class="formula-line mono">f* = (b · p − q) / b = p − q / b</p>
+              <p>其中 <span class="mono">p</span> 为头奖概率，<span class="mono">q = 1 − p</span>，<span class="mono">b</span> 为净赔率（赢时每 1 元净赚多少）。当 <span class="mono">p · b &lt; q</span> 时 <span class="mono">f* &lt; 0</span>，代表这个赌局对下注者不利。</p>
+            </div>
+            <div class="formula-block">
+              <p class="formula-label">对数增长率</p>
+              <p class="formula-line mono">g(f) = p · ln(1 + f · b) + q · ln(1 − f)</p>
+              <p><span class="mono">g(f)</span> 是每期资金的对数增长率。最优仓位让 <span class="mono">g′(f) = 0</span>；当 <span class="mono">g′(0) = p · b − q &lt; 0</span> 时，最优仓位就是 0，而不是“小注试试”。当 <span class="mono">f → 1</span> 时 <span class="mono">g(f) → −∞</span>：全仓下注一旦未中即归零，长期增长率为负无穷。</p>
+            </div>
+            <div class="formula-block">
+              <p class="formula-label">净赔率口径</p>
+              <p class="formula-line mono">b = (头奖奖金 − 单注成本) / 单注成本</p>
+              <p>以 2 元单注、500 万元头奖为例，<span class="mono">b = 2,499,999</span>。把二等奖及以下奖级也纳入后，可以把每个奖级视为独立“赢”的结果，用多奖级判据检验。</p>
+            </div>
+            <div class="formula-block">
+              <p class="formula-label">多奖级判据</p>
+              <p class="formula-line mono">g′(0) = Σ pᵢ · bᵢ = 返奖率 − 1</p>
+              <p id="m1-multi-verdict">把 7 个奖级全部计入，<span class="mono">g′(0)</span> 仍等于返奖率减 1。当前规则返奖率 51%，所以 <span class="mono">g′(0) = −0.49 &lt; 0</span>，最优仓位仍为 0。</p>
+            </div>
+            <div class="formula-block">
+              <p class="formula-label">组合计数</p>
+              <p class="formula-line mono">C(35,5) × C(12,2) = 324,632 × 66 = 21,425,712</p>
+              <p>一等奖概率为 <span class="mono">1 / 21,425,712</span>；7 个奖级由 13 个中奖条件归并，中奖组合合计 <span class="mono">1,429,197</span>，任意奖级中奖率约 <span class="mono">6.67%</span>。</p>
+            </div>
+            <div class="formula-block">
+              <p class="formula-label">数据来源</p>
+              <p>历史开奖取自 500.com 大乐透历史数据页，首次启动自动抓取并写入本地缓存；页面顶部显示缓存期数、最新期号与抓取时间，参数与结论均可复现。</p>
+            </div>
+          </div>
+        </details>
+
+        <div class="notes" id="m1-notes" aria-live="polite"></div>
+      </section>
+
+      <!-- 03 模型二 -->
+      <section class="section" id="model2" aria-labelledby="model2-title" hidden>
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">03</span> MODEL 02 / 全包号</p>
+          <h2 id="model2-title">买下所有号码，能稳赚吗？</h2>
+          <p class="lede">曼德尔式全包号：花 4285 万元买下 21,425,712 注。只要固定奖回血、二等奖回血与头奖加起来超过成本，就“理论上”赚钱。现实里，封顶、分奖与出票能力会先一步拦住你。</p>
+        </header>
+
+        <div class="section-alert" data-alert="model2" hidden></div>
+
+        <div class="card control-card">
+          <div class="control-grid control-grid--three">
+            <div class="field">
+              <label for="m2-jackpot">头奖（万元）</label>
+              <input type="number" id="m2-jackpot" value="500" min="0" max="100000" step="10" inputmode="decimal">
+              <p class="field-hint">假设你独中头奖且无多人分奖。</p>
+            </div>
+            <div class="field">
+              <label for="m2-second">二等奖（万元）</label>
+              <input type="number" id="m2-second" value="10" min="0" max="10000" step="1" inputmode="decimal">
+              <p class="field-hint">全包会命中大量二等奖。</p>
+            </div>
+            <div class="field">
+              <label for="m2-tps">每秒出票注数</label>
+              <input type="number" id="m2-tps" value="1" min="0.01" max="100000" step="1" inputmode="decimal">
+              <p class="field-hint">默认每秒 1 注，用于估算出票时间。</p>
+            </div>
+          </div>
+          <p class="compute-state" id="m2-state" aria-live="polite">等待计算</p>
+        </div>
+
+        <div class="metric-grid metric-grid--four">
+          <article class="metric">
+            <p class="metric-label">全包成本</p>
+            <p class="metric-value mono" id="m2-cost">—</p>
+            <p class="metric-note">21,425,712 注 × 2 元</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">固定奖回血</p>
+            <p class="metric-value mono" id="m2-fixed">—</p>
+            <p class="metric-note">三至七等奖</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">二等奖回血</p>
+            <p class="metric-value mono" id="m2-second-rebate">—</p>
+            <p class="metric-note">按输入单注金额估算</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">总收入</p>
+            <p class="metric-value mono" id="m2-total-income">—</p>
+            <p class="metric-note">头奖 + 二奖 + 固定奖</p>
+          </article>
+          <article class="metric metric--emphasis">
+            <p class="metric-label">净盈亏</p>
+            <p class="metric-value mono" id="m2-net">—</p>
+            <p class="metric-note">总收入 − 全包成本</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">盈亏平衡头奖</p>
+            <p class="metric-value mono" id="m2-breakeven">—</p>
+            <p class="metric-note">覆盖成本所需头奖</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">距基本封顶差距</p>
+            <p class="metric-value mono" id="m2-gap">—</p>
+            <p class="metric-note">平衡头奖 − 1000 万</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">出票完成时间</p>
+            <p class="metric-value mono" id="m2-days">—</p>
+            <p class="metric-note">按输入速度连续出票</p>
+          </article>
+        </div>
+
+        <div class="verdict-line" id="m2-verdict" role="status">等待模型结果…</div>
+
+        <div class="split split--wide">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">成本构成</p>
+                <h2 class="card-title">4285 万元都去了哪里</h2>
+              </div>
+              <span class="badge">全包成本拆解</span>
+            </div>
+            <div class="chart chart--cost" id="chart-m2-cost" role="img" aria-label="全包成本构成图，展示固定奖回血、二等奖回血、头奖回血与净亏损占比"></div>
+            <p class="chart-caption" id="m2-cost-caption">回血部分来自你给自己发奖；净亏损是无论怎么组合都填不平的缺口。</p>
+          </article>
+
+          <article class="card case-card">
+            <p class="card-kicker">历史参照</p>
+            <h2 class="card-title">1992 · 弗吉尼亚案例</h2>
+            <dl class="case-stats">
+              <div><dt>购买成本</dt><dd class="mono">约 706 万美元</dd></div>
+              <div><dt>头奖金额</dt><dd class="mono">约 2703 万美元</dd></div>
+              <div><dt>税前净赚</dt><dd class="mono">约 2000 万美元</dd></div>
+            </dl>
+            <p>曼德尔团队通过批量购买覆盖全部组合，在特定规则漏洞下获利。那是“规则允许 + 奖池足够大 + 竞争少”的极端条件，不是可复制策略。</p>
+            <p class="case-warn">在中国大乐透：单注封顶、多人分奖、出票速度与销售窗口共同决定了全包号不适用。</p>
+          </article>
+        </div>
+
+        <div class="notes" id="m2-notes" aria-live="polite"></div>
+      </section>
+
+      <!-- 04 模型三 -->
+      <section class="section" id="model3" aria-labelledby="model3-title" hidden>
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">04</span> MODEL 03 / 倍投</p>
+          <h2 id="model3-title">倍投不是策略，是加速破产。</h2>
+          <p class="lede">输一把就翻倍，听起来只要本金够厚就能等到赢。可本金有限、期数有限、单注上限有限；只要期望为负，倍投只改变你亏完的路径，不改变终点。</p>
+        </header>
+
+        <div class="section-alert" data-alert="model3" hidden></div>
+
+        <div class="assumption-banner" id="m3-assumption">
+          <strong>理想化假设</strong>
+          <span>本模拟采用对倍投最有利的 1:1 回本假设：赢一把即可收回此前所有投入并净赚初始注额；不设投注上限、不抽水、不封顶。</span>
+        </div>
+
+        <div class="card control-card">
+          <div class="control-grid control-grid--six">
+            <div class="field">
+              <label for="m3-base">初始注额（元）</label>
+              <input type="number" id="m3-base" value="2" min="0.01" max="100000" step="1" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="m3-mult">倍数</label>
+              <input type="number" id="m3-mult" value="2" min="1.01" max="10" step="0.1" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="m3-bankroll">本金（元）</label>
+              <input type="number" id="m3-bankroll" value="10000" min="1" max="100000000" step="100" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="m3-rounds">轮数</label>
+              <input type="number" id="m3-rounds" value="100" min="1" max="1000" step="1" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="m3-sims">模拟次数</label>
+              <input type="number" id="m3-sims" value="1000" min="100" max="5000" step="100" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="m3-pwin">单注胜率（%）</label>
+              <input type="number" id="m3-pwin" value="6.67" min="0.01" max="100" step="0.01" inputmode="decimal">
+            </div>
+          </div>
+          <p class="compute-state" id="m3-state" aria-live="polite">等待计算</p>
+        </div>
+
+        <div class="metric-grid metric-grid--four">
+          <article class="metric metric--emphasis">
+            <p class="metric-label">破产概率</p>
+            <p class="metric-value mono" id="m3-ruin">—</p>
+            <p class="metric-note">本金无法覆盖下一注</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">破产轮次中位数</p>
+            <p class="metric-value mono" id="m3-median">—</p>
+            <p class="metric-note">未破产样本不计入</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">平均最大连黑</p>
+            <p class="metric-value mono" id="m3-maxstreak">—</p>
+            <p class="metric-note">模拟样本均值</p>
+          </article>
+          <article class="metric">
+            <p class="metric-label">期末平均本金</p>
+            <p class="metric-value mono" id="m3-meanbank">—</p>
+            <p class="metric-note">含已破产样本</p>
+          </article>
+        </div>
+
+        <div class="verdict-line" id="m3-verdict" role="status">等待模拟结果…</div>
+
+        <div class="split split--wide">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">资金需求</p>
+                <h2 class="card-title">连黑 10 / 16 / 20 次</h2>
+              </div>
+              <span class="badge badge--amber">按 2 倍倍投</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">连黑</th>
+                    <th scope="col" class="num">已投入</th>
+                    <th scope="col" class="num">下一注</th>
+                    <th scope="col" class="num">合计所需</th>
+                  </tr>
+                </thead>
+                <tbody id="m3-table-body">
+                  <tr><td colspan="4" class="table-empty">等待模拟数据…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="chart-caption">连黑 20 次时，合计需要约 419 万元。中奖概率不会因为“已经连黑很多次”而上升。</p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">资金需求（对数轴）</p>
+                <h2 class="card-title">指数增长的本金要求</h2>
+              </div>
+            </div>
+            <div class="chart chart--capital" id="chart-m3-capital" role="img" aria-label="连黑十次、十六次、二十次的已投入、下一注和合计资金需求对数柱状图"></div>
+            <p class="chart-caption">纵轴为对数刻度。看似“只多几把”，实际资金需求呈指数级膨胀。</p>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-kicker">蒙特卡洛</p>
+              <h2 class="card-title">若干条资金曲线</h2>
+            </div>
+            <span class="badge badge--teal" id="m3-path-note">抽样展示</span>
+          </div>
+          <div class="chart chart--paths" id="chart-m3-paths" role="img" aria-label="蒙特卡洛模拟的若干条资金曲线，展示倍投策略下本金随轮次的变化"></div>
+          <p class="chart-caption">曲线在破产后截断。绝大多数路径的终点是 0，少数路径靠一次中奖短暂回升。</p>
+        </article>
+
+        <div class="notes" id="m3-notes" aria-live="polite"></div>
+      </section>
+
+      <!-- 05 历史检验 -->
+      <section class="section" id="history" aria-labelledby="history-title" hidden>
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">05</span> HISTORY / 历史检验</p>
+          <h2 id="history-title">历史不欠你，冷号不会“该出了”。</h2>
+          <p class="lede">用 2007 年至今的真实开奖检验均匀性、冷热号、遗漏与选号策略。若开奖是随机的，所有“规律”都应落在统计误差内。</p>
+        </header>
+
+        <div class="section-alert" data-alert="history" hidden></div>
+
+        <div class="card control-card">
+          <div class="control-grid control-grid--three">
+            <div class="field">
+              <label for="h-window">统计窗口</label>
+              <select id="h-window">
+                <option value="all" selected>全部历史</option>
+                <option value="500">最近 500 期</option>
+                <option value="1000">最近 1000 期</option>
+              </select>
+              <p class="field-hint">影响卡方与冷热号统计范围。</p>
+            </div>
+            <div class="field">
+              <label for="h-periods">策略对照期数</label>
+              <input type="number" id="h-periods" value="300" min="100" max="1000" step="50" inputmode="numeric">
+              <p class="field-hint">范围 100–1000，默认 300 期。</p>
+            </div>
+            <div class="field field--action">
+              <span class="field-label">运行检验</span>
+              <button type="button" class="btn btn--solid" id="h-run">运行历史检验</button>
+              <p class="field-hint">参数变化后也会自动重算（300ms 防抖）。</p>
+            </div>
+          </div>
+          <p class="compute-state" id="h-state" aria-live="polite">等待运行</p>
+        </div>
+
+        <div class="split split--half">
+          <article class="card chi-card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">前区 · 35 选 5</p>
+                <h2 class="card-title">卡方均匀性检验</h2>
+              </div>
+              <span class="badge" id="chi-front-badge">—</span>
+            </div>
+            <dl class="chi-stats">
+              <div><dt>统计量 χ²</dt><dd class="mono" id="chi-front-stat">—</dd></div>
+              <div><dt>自由度 df</dt><dd class="mono" id="chi-front-df">—</dd></div>
+              <div><dt>p 值</dt><dd class="mono" id="chi-front-p">—</dd></div>
+              <div><dt>0.05 临界值</dt><dd class="mono" id="chi-front-critical">—</dd></div>
+            </dl>
+            <p class="chi-conclusion" id="chi-front-conclusion">等待数据…</p>
+          </article>
+
+          <article class="card chi-card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">后区 · 12 选 2</p>
+                <h2 class="card-title">卡方均匀性检验</h2>
+              </div>
+              <span class="badge" id="chi-back-badge">—</span>
+            </div>
+            <dl class="chi-stats">
+              <div><dt>统计量 χ²</dt><dd class="mono" id="chi-back-stat">—</dd></div>
+              <div><dt>自由度 df</dt><dd class="mono" id="chi-back-df">—</dd></div>
+              <div><dt>p 值</dt><dd class="mono" id="chi-back-p">—</dd></div>
+              <div><dt>0.05 临界值</dt><dd class="mono" id="chi-back-critical">—</dd></div>
+            </dl>
+            <p class="chi-conclusion" id="chi-back-conclusion">等待数据…</p>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-kicker">号码频次</p>
+              <h2 class="card-title">观测频次与 ±2σ 随机带</h2>
+            </div>
+            <div class="segmented" role="group" aria-label="频次图号码区选择">
+              <button type="button" class="seg is-active" data-freq-view="front" aria-pressed="true">前区</button>
+              <button type="button" class="seg" data-freq-view="back" aria-pressed="false">后区</button>
+            </div>
+          </div>
+          <div class="chart chart--history" id="chart-h-freq" role="img" aria-label="号码出现频次柱状图，带上下置信带与理论均值线"></div>
+          <p class="chart-caption" id="freq-caption">柱高为实际出现次数；虚线为理论均值 ±2σ 随机带。绝大多数柱子落在带内，说明没有“必然出现的号”。</p>
+        </article>
+
+        <div class="split split--half">
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">冷热号</p>
+                <h2 class="card-title">前区频次极值</h2>
+              </div>
+            </div>
+            <div class="hotcold">
+              <div>
+                <p class="hotcold-title">热号 TOP 5</p>
+                <ul class="number-list" id="hot-front"></ul>
+              </div>
+              <div>
+                <p class="hotcold-title">冷号 TOP 5</p>
+                <ul class="number-list" id="cold-front"></ul>
+              </div>
+            </div>
+            <p class="chart-caption" id="hot-front-note">等待数据…</p>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <p class="card-kicker">冷热号</p>
+                <h2 class="card-title">后区频次极值</h2>
+              </div>
+            </div>
+            <div class="hotcold">
+              <div>
+                <p class="hotcold-title">热号 TOP 5</p>
+                <ul class="number-list" id="hot-back"></ul>
+              </div>
+              <div>
+                <p class="hotcold-title">冷号 TOP 5</p>
+                <ul class="number-list" id="cold-back"></ul>
+              </div>
+            </div>
+            <p class="chart-caption" id="hot-back-note">等待数据…</p>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-kicker">遗漏分析</p>
+              <h2 class="card-title">当前遗漏与理论均值</h2>
+            </div>
+            <div class="segmented" role="group" aria-label="遗漏图号码区选择">
+              <button type="button" class="seg is-active" data-omit-view="front" aria-pressed="true">前区</button>
+              <button type="button" class="seg" data-omit-view="back" aria-pressed="false">后区</button>
+            </div>
+          </div>
+          <div class="chart chart--history" id="chart-h-omit" role="img" aria-label="各号码当前遗漏柱状图，含理论平均遗漏线"></div>
+          <p class="chart-caption" id="omit-caption">理论均值线为几何分布期望。遗漏变长不会提高下一期出现的概率。</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="card-kicker">策略对照</p>
+              <h2 class="card-title">机选 / 热号 / 冷号 / 上期重号</h2>
+            </div>
+            <span class="badge" id="strategy-badge">—</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">策略</th>
+                  <th scope="col" class="num">平均前区命中</th>
+                  <th scope="col" class="num">平均后区命中</th>
+                  <th scope="col" class="num">任意奖级中奖率</th>
+                  <th scope="col" class="num">样本期数</th>
+                  <th scope="col">判定（±2 标准误）</th>
+                </tr>
+              </thead>
+              <tbody id="strategy-body">
+                <tr><td colspan="5" class="table-empty">等待数据…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="chart chart--strategy" id="chart-h-strategy" role="img" aria-label="不同选号策略的任意奖级中奖率柱状图，与理论基线对比"></div>
+          <p class="chart-caption" id="strategy-note">与理论基线的差异应落在标准误范围内；未发现稳定优势。</p>
+        </article>
+
+        <div class="verdict-line verdict-line--teal" id="h-conclusion" role="status">等待检验结论…</div>
+        <div class="notes" id="h-limits" aria-live="polite"></div>
+      </section>
+
+      <!-- 06 结语 -->
+      <section class="section" id="conclusion" aria-labelledby="conclusion-title" hidden>
+        <header class="section-head">
+          <p class="eyebrow"><span class="eyebrow-idx">06</span> CLOSING / 结语</p>
+          <h2 id="conclusion-title">唯一可控的变量，是预算。</h2>
+          <p class="lede">你无法控制开奖结果，也无法通过历史数据提高命中率。能控制的只有：花多少钱、花多久、是否把它当成娱乐而不是投资。</p>
+        </header>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span class="summary-idx mono">01</span>
+            <h3>模型一 · 不投</h3>
+            <p>期望为负，凯利仓位为 0。任何“小注试试”的长期对数增长率都低于不下注。</p>
+          </article>
+          <article class="summary-card">
+            <span class="summary-idx mono">02</span>
+            <h3>模型二 · 不适用</h3>
+            <p>全包需要 4285 万元，盈亏平衡头奖高于封顶。买下所有号码也填不平 49% 的抽水。</p>
+          </article>
+          <article class="summary-card">
+            <span class="summary-idx mono">03</span>
+            <h3>模型三 · 必亏</h3>
+            <p>倍投放大波动，不改变负期望。有限本金下，破产概率随轮数趋近 1。</p>
+          </article>
+        </div>
+
+        <div class="split split--wide">
+          <article class="card">
+            <p class="card-kicker">视频拆解</p>
+            <h2 class="card-title">六段脉络</h2>
+            <ol class="timeline">
+              <li><span class="timeline-idx mono">01</span><div><h4>标题钩子</h4><p>“手搓大乐透一等奖”是流量入口，正片并不预测号码，而是逐项验证。</p></div></li>
+              <li><span class="timeline-idx mono">02</span><div><h4>概率底牌</h4><p>35 选 5、12 选 2，总组合 21,425,712；头奖概率约 4.667×10⁻⁸。</p></div></li>
+              <li><span class="timeline-idx mono">03</span><div><h4>模型一：期望 + 凯利</h4><p>单注期望为负，凯利最优仓位为 0；临界头奖约 4285 万元，超过封顶。</p></div></li>
+              <li><span class="timeline-idx mono">04</span><div><h4>模型二：全包号</h4><p>成本 4285 万元，固定奖与二等奖回血后仍净亏，封顶使策略不适用。</p></div></li>
+              <li><span class="timeline-idx mono">05</span><div><h4>模型三：倍投</h4><p>连黑 20 次需要约 419 万元；有限本金下破产是时间问题。</p></div></li>
+              <li><span class="timeline-idx mono">06</span><div><h4>结论</h4><p>无法预测，最优是不买；要买只当娱乐，并用预算封顶。</p></div></li>
+            </ol>
+          </article>
+
+          <div class="stack">
+            <article class="card">
+              <p class="card-kicker">亮点</p>
+              <h3 class="card-title">把“预测”换成“验证”</h3>
+              <ul class="bullet-list">
+                <li>用公式、历史数据与蒙特卡洛三重证据交叉验证同一个结论。</li>
+                <li>把“冷热号”放回置信带里看，承认随机波动。</li>
+                <li>明确区分视频口径与当前 7 奖级规则，不混用数字。</li>
+              </ul>
+            </article>
+            <article class="card">
+              <p class="card-kicker">局限</p>
+              <h3 class="card-title">模型之外仍有现实变量</h3>
+              <ul class="bullet-list">
+                <li>视频口径为 9 奖级、500 万头奖；当前规则为 7 奖级、单注封顶。</li>
+                <li>未计入追加投注、浮动奖金、多人分奖与税费。</li>
+                <li>蒙特卡洛依赖 1:1 回本等理想化假设，真实规则更不利。</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+
+        <article class="card budget-card">
+          <div class="card-head">
+            <div>
+              <p class="card-kicker">娱乐预算计算器</p>
+              <h2 class="card-title">把“想买多少”换成“亏得起多少”</h2>
+            </div>
+            <span class="badge badge--amber">唯一可控变量</span>
+          </div>
+          <div class="budget-grid">
+            <div class="field">
+              <label for="budget-input">每月娱乐预算（元）</label>
+              <input type="number" id="budget-input" value="100" min="0" max="1000000" step="10" inputmode="decimal">
+              <p class="field-hint">这笔钱即使全部亏掉，也不影响生活。</p>
+            </div>
+            <div class="budget-result">
+              <div class="budget-stat">
+                <span class="budget-label">可购注数</span>
+                <strong class="mono" id="budget-tickets">50 注</strong>
+              </div>
+              <div class="budget-stat">
+                <span class="budget-label">预计净损失（×49%）</span>
+                <strong class="mono budget-loss" id="budget-loss">49.00 元</strong>
+              </div>
+              <div class="budget-stat">
+                <span class="budget-label">至少中一次头奖概率</span>
+                <strong class="mono" id="budget-jackpot">—</strong>
+              </div>
+              <div class="budget-stat">
+                <span class="budget-label">至少中一次任意奖级概率</span>
+                <strong class="mono" id="budget-any">—</strong>
+              </div>
+            </div>
+          </div>
+          <p class="budget-note">中头奖概率用 <span class="mono">1 − (1 − p)ⁿ</span> 计算，结果仍接近 0。按 51% 奖金计提，长期平均每投入 100 元回收约 51 元。</p>
+        </article>
+
+        <article class="risk-card" role="note">
+          <p class="risk-title">风险提示</p>
+          <p>彩票是负期望游戏，历史数据不能预测未来；本工具仅供学习与科普娱乐，不承诺中奖；理性购彩，未成年人不得购买彩票。</p>
+          <p class="risk-sub">本页面不提供预测号码、推荐投注、代购、支付或任何购彩跳转。</p>
+        </article>
+      </section>
+
+      <footer class="colophon">
+        <p>大乐透三大模型数学验证实验室 · 本地运行</p>
+        <p class="mono">DATA / 2007—2026 · RULES / 7 PRIZE TIERS · NO PREDICTION</p>
+      </footer>
+    </main>
+  </div>
+
+  <div class="risk-bar" role="note" aria-label="固定风险提示">
+    <span class="risk-bar-dot" aria-hidden="true"></span>
+    <p>彩票是负期望游戏，历史数据不能预测未来；本工具仅供学习与科普娱乐，不承诺中奖；理性购彩，未成年人不得购买彩票。</p>
+  </div>
+
+  <noscript>
+    <div class="noscript">本页面需要启用 JavaScript 才能读取数据与绘制图表。</div>
+  </noscript>
+
+  <script src="/static/vendor/echarts.min.js"></script>
+  <script src="/static/app.js?v=20261124"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>账号设置 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">账号设置</h1>
+      <p class="page-lead">管理账号、导出你的记录，或删除账号与全部数据。</p>
+
+      <section class="card">
+        <h2 class="section-title">当前账号</h2>
+        <div class="account-row">
+          <div>
+            <p class="muted small" style="margin:0 0 2px;">用户名</p>
+            <p class="account-name" id="account-name">加载中…</p>
+            <p class="muted small" id="account-id"></p>
+          </div>
+        </div>
+        <div class="form-error" id="account-error" role="alert" hidden></div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">修改密码</h2>
+        <p class="hint">修改成功后所有登录状态将失效，需要使用新密码重新登录。</p>
+        <form id="password-form" novalidate>
+          <div class="field">
+            <label for="old-password">当前密码</label>
+            <input id="old-password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="new-password">新密码</label>
+            <input id="new-password" type="password" autocomplete="new-password" required>
+            <p class="hint">8–128 位，建议包含字母与数字。</p>
+          </div>
+          <div class="field">
+            <label for="confirm-password">确认新密码</label>
+            <input id="confirm-password" type="password" autocomplete="new-password" required>
+          </div>
+          <div class="form-error" id="password-error" role="alert" hidden></div>
+          <p class="form-success" id="password-status" role="status" hidden></p>
+          <div class="row-actions">
+            <button class="btn btn-primary" type="submit" id="password-save">保存新密码</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">导出我的数据</h2>
+        <p class="muted small">导出内容包含账号信息、号码本、预算、支出与提醒设置，不含密码与登录令牌。</p>
+        <div class="form-error" id="export-error" role="alert" hidden></div>
+        <p class="form-success" id="export-status" role="status" hidden></p>
+        <div class="row-actions">
+          <button class="btn btn-ghost" type="button" id="export-btn">下载 JSON 备份</button>
+        </div>
+      </section>
+
+      <section class="card danger-zone">
+        <h2 class="section-title">删除账号</h2>
+        <p class="notice notice-danger">
+          删除账号会同时删除号码本、预算、支出与提醒等全部数据，且无法恢复。
+        </p>
+        <form id="delete-form" novalidate>
+          <div class="field">
+            <label for="delete-password">输入当前密码</label>
+            <input id="delete-password" type="password" autocomplete="current-password">
+          </div>
+          <div class="field">
+            <label for="delete-confirm">输入 DELETE 以确认</label>
+            <input id="delete-confirm" type="text" autocomplete="off" placeholder="DELETE">
+          </div>
+          <div class="form-error" id="delete-error" role="alert" hidden></div>
+          <div class="row-actions">
+            <button class="btn btn-danger" type="submit" id="delete-btn">永久删除账号</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">合规与隐私</h2>
+        <p class="muted small">了解数据收集范围与工具的功能边界。</p>
+        <div class="row-actions">
+          <a class="btn btn-ghost btn-sm" href="/static/privacy.html">隐私政策</a>
+          <a class="btn btn-ghost btn-sm" href="/static/compliance.html">合规声明</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+"""大乐透规则与概率常量（所有模块共用）。
+
+口径：当前官方规则（2026-02-02 起，7 个奖级）。
+"""
+
+# 单注价格（元）
+TICKET_PRICE = 2
+
+# 号码池与选号数量
+FRONT_POOL = 35
+BACK_POOL = 12
+FRONT_PICK = 5
+BACK_PICK = 2
+
+# 组合数：C(35,5)=324,632；C(12,2)=66；合计 21,425,712
+FRONT_COMBOS = 324632
+BACK_COMBOS = 66
+TOTAL_COMBOS = 21425712
+
+# 一等奖概率
+JACKPOT_PROB = 1 / TOTAL_COMBOS
+
+# 任意奖级中奖组合数与中奖率（约 6.67%）
+ANY_PRIZE_COMBOS = 1429197
+ANY_PRIZE_RATE = ANY_PRIZE_COMBOS / TOTAL_COMBOS
+
+# 奖金计提 51%（当期奖金 49% + 调节基金 2%）
+RETURN_RATE = 0.51
+CURRENT_PRIZE_RATE = 0.49
+
+# 奖池阈值（8 亿元），达到后固定奖进入高档位
+POOL_THRESHOLD = 800_000_000
+
+# 单注头奖上限（元）
+JACKPOT_CAP_BASIC = 10_000_000
+JACKPOT_CAP_ADDON = 18_000_000
+
+# 单注期望命中数
+FRONT_EXPECTED_HITS = 5 * 5 / 35
+BACK_EXPECTED_HITS = 2 * 2 / 12

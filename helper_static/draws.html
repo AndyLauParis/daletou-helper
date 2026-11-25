@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>开奖查询 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <h1 class="page-title">开奖查询</h1>
+      <p class="page-lead">按游戏查询最近开奖号码或赛果，仅用于个人核对与记录。</p>
+      <p class="notice">
+        开奖数据来自官方公开渠道，可能存在延迟；开奖号码、奖级与奖金一律以官方公告为准，如遇调整以官方为准。
+      </p>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="field">
+            <label for="game-select">游戏</label>
+            <select id="game-select"></select>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-primary" type="button" id="refresh-btn">刷新数据</button>
+            <button class="btn btn-ghost" type="button" id="reload-btn">重新加载</button>
+          </div>
+        </div>
+
+        <p class="meta-line" id="status-line">正在加载游戏目录…</p>
+        <div class="form-error" id="error-box" role="alert" hidden></div>
+        <div id="draws-root" aria-live="polite">
+          <div class="empty">正在加载开奖数据…</div>
+        </div>
+      </section>
+
+      <p class="hint">
+        本工具只提供开奖查询与号码核对，不代购、不支付、不出票、不自动兑奖，也不提供号码预测或推荐。
+      </p>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/draws.js"></script>
+</body>
+</html>
