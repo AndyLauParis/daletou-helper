@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from helper import config
+from helper.api import games as games_api
 from helper.games import bqc6, cache, jq4, rx9, sfc14
 from helper_app import app
 
@@ -654,6 +655,7 @@ def test_api_bqc6_draws_when_page_blocked(client, monkeypatch):
 
 
 def test_api_bqc6_refresh_failure_keeps_old_cache(client, monkeypatch):
+    games_api.reset_refresh_state()
     old_matches = [
         {
             "index": index + 1,
@@ -727,6 +729,7 @@ def test_api_sfc14_draws_and_check(client, monkeypatch):
 
 
 def test_api_sfc14_refresh_failure_keeps_old_cache(client, monkeypatch):
+    games_api.reset_refresh_state()
     old_draw = _sfc_draw(issue="26160", date="2026-11-01")
     assert cache.save_cache("sfc14", [old_draw], "旧缓存") is not None
     before = cache.load_cache("sfc14")
@@ -749,6 +752,8 @@ def test_api_sfc14_refresh_failure_keeps_old_cache(client, monkeypatch):
     assert after["updated_at"] == before["updated_at"]
     assert [draw["issue"] for draw in after["draws"]] == ["26160"]
 
+    # 手动刷新有 30 秒节流；清理状态以验证 draws?refresh=true 的降级路径
+    games_api.reset_refresh_state()
     fallback = client.get(
         "/api/helper/games/sfc14/draws", params={"refresh": "true"}
     )

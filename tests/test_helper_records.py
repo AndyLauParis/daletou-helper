@@ -318,6 +318,33 @@ def test_payload_must_be_json_object(client):
     assert missing.status_code == 400
 
 
+def test_record_name_and_payload_size_limits(client):
+    token = register(client)
+
+    long_name = create_record(
+        client, token, name="名" * (records_api.MAX_NAME_LENGTH + 1)
+    )
+    assert long_name.status_code == 400
+    assert "名称最多" in long_name.json()["detail"]
+
+    huge_payload = create_record(
+        client,
+        token,
+        payload={"text": "x" * (records_api.MAX_PAYLOAD_BYTES + 1)},
+    )
+    assert huge_payload.status_code == 400
+    assert "payload 内容过大" in huge_payload.json()["detail"]
+
+    record_id = create_record(client, token).json()["id"]
+    updated = client.put(
+        f"/api/helper/numbers/{record_id}",
+        headers=auth_header(token),
+        json={"name": "名" * (records_api.MAX_NAME_LENGTH + 1)},
+    )
+    assert updated.status_code == 400
+    assert "名称最多" in updated.json()["detail"]
+
+
 def test_unknown_game_rejected(client):
     token = register(client)
     resp = create_record(client, token, game_code="not-a-game")

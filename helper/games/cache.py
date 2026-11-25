@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -137,8 +138,12 @@ def save_cache(
     try:
         path = cache_path(code)
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = path.with_name(path.name + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as fh:
+        # 每次写入使用唯一临时文件，避免并发写互相覆盖或交错
+        fd, tmp_name = tempfile.mkstemp(
+            dir=path.parent, prefix=path.name + ".", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_name)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=1)
         os.replace(tmp_path, path)
     except (OSError, ValueError, TypeError) as exc:
@@ -173,9 +178,8 @@ def merge_draws(old: list[dict] | None, new: list[dict] | None) -> list[dict]:
     return ordered[:MAX_DRAWS]
 
 
-def is_fresh(meta, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
-    """判断某游戏的缓存是否仍在有效期内且有数据。"""
-    payload = load_cache(meta.code)
+def is_fresh_payload(payload: dict, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
+    """判断已加载的缓存载荷是否仍在有效期内且有数据。"""
     if not payload.get("draws"):
         return False
     updated_at = payload.get("updated_at")
@@ -189,6 +193,11 @@ def is_fresh(meta, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
         stamp = stamp.replace(tzinfo=datetime.now().astimezone().tzinfo)
     age = (datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds()
     return age <= ttl_seconds
+
+
+def is_fresh(meta, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> bool:
+    """判断某游戏的缓存是否仍在有效期内且有数据。"""
+    return is_fresh_payload(load_cache(meta.code), ttl_seconds)
 
 
 def status_for(code: str) -> dict:

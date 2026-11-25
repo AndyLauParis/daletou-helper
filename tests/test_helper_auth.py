@@ -143,6 +143,24 @@ def test_successful_login_clears_failure_counter(client):
     assert login(client).status_code == 200
 
 
+def test_login_failure_tracking_is_bounded():
+    """随机用户名不能无限扩张进程内的失败计数。"""
+    auth_api.reset_login_rate_limit()
+    try:
+        for index in range(auth_api.MAX_FAILURE_KEYS + 20):
+            auth_api.record_login_failure(("127.0.0.1", f"user{index}"))
+        assert len(auth_api._failures) <= auth_api.MAX_FAILURE_KEYS
+    finally:
+        auth_api.reset_login_rate_limit()
+
+
+def test_login_invalid_username_not_tracked(client):
+    auth_api.reset_login_rate_limit()
+    resp = login(client, username="bad name!")
+    assert resp.status_code == 401
+    assert auth_api._failures == {}
+
+
 def test_me_requires_token(client):
     no_token = client.get("/api/helper/auth/me")
     assert no_token.status_code == 401

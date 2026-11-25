@@ -30,6 +30,12 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9_\u4e00-\u9fa5]{3,32}$")
 _failures: dict[tuple[str, str], list[float]] = {}
 _lock = threading.Lock()
 
+# 失败计数最多保留的 key 数量，避免随机用户名导致进程内存无界增长
+MAX_FAILURE_KEYS = 1024
+
+# 用户不存在时也执行一次同成本的密码校验，避免通过响应时间枚举用户名
+_DUMMY_PASSWORD_HASH, _DUMMY_PASSWORD_SALT = hash_password("timing-equalizer")
+
 
 class RegisterRequest(BaseModel):
     username: str
@@ -77,6 +83,16 @@ def _prune(bucket: list[float], now: float) -> list[float]:
     return [ts for ts in bucket if ts > cutoff]
 
 
+def _prune_all(now: float) -> None:
+    """清理所有已过失败窗口的 key，必须持有 _lock 调用。"""
+    for key in list(_failures):
+        bucket = _prune(_failures[key], now)
+        if bucket:
+            _failures[key] = bucket
+        else:
+            del _failures[key]
+
+
 def check_login_rate_limit(key: tuple[str, str]) -> None:
     now = time.time()
     with _lock:
@@ -98,6 +114,11 @@ def record_login_failure(key: tuple[str, str]) -> None:
     with _lock:
         bucket = _prune(_failures.get(key, []), now)
         bucket.append(now)
+        if key not in _failures and len(_failures) >= MAX_FAILURE_KEYS:
+            _prune_all(now)
+            if len(_failures) >= MAX_FAILURE_KEYS:
+                oldest = min(_failures, key=lambda item: _failures[item][-1])
+                _failures.pop(oldest, None)
         _failures[key] = bucket
 
 
@@ -174,6 +195,9 @@ def login(payload: LoginRequest, request: Request, db=Depends(get_db)):
     username = (payload.username or "").strip()
     if not username or not payload.password:
         raise HTTPException(status_code=400, detail="请输入用户名和密码")
+    if not USERNAME_RE.fullmatch(username):
+        # 不合法的用户名不可能注册成功，直接拒绝且不写入失败计数
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     key = (_client_ip(request), username)
     check_login_rate_limit(key)
@@ -182,9 +206,12 @@ def login(payload: LoginRequest, request: Request, db=Depends(get_db)):
         "SELECT id, username, password_hash, password_salt FROM users WHERE username = ?",
         (username,),
     ).fetchone()
-    if row is None or not verify_password(
-        payload.password, row["password_hash"], row["password_salt"]
-    ):
+    if row is None:
+        # 用户不存在也走一次 scrypt，保持与真实用户相近的响应时间
+        verify_password(payload.password, _DUMMY_PASSWORD_HASH, _DUMMY_PASSWORD_SALT)
+        record_login_failure(key)
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    if not verify_password(payload.password, row["password_hash"], row["password_salt"]):
         record_login_failure(key)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 

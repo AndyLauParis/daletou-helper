@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from helper import config
+from helper.api import games as games_api
 from helper.games import cache, fc3d, kl8, qlc, ssq
 from helper_app import app
 
@@ -471,6 +472,7 @@ def test_check_api_end_to_end(client):
 
 
 def test_refresh_failure_keeps_old_cache(client, monkeypatch):
+    games_api.reset_refresh_state()
     old = {
         "issue": "2026133",
         "date": "2026-11-19",
@@ -497,6 +499,8 @@ def test_refresh_failure_keeps_old_cache(client, monkeypatch):
     assert after["updated_at"] == before["updated_at"]
     assert [draw["issue"] for draw in after["draws"]] == ["2026133"]
 
+    # 手动刷新有 30 秒节流；清理状态以验证 draws?refresh=true 的降级路径
+    games_api.reset_refresh_state()
     fallback = client.get("/api/helper/games/ssq/draws", params={"refresh": "true"})
     assert fallback.status_code == 200
     assert fallback.json()["status"] == "stale"

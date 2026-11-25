@@ -10,7 +10,7 @@ import re
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from ..db import get_db
@@ -141,6 +141,8 @@ def set_budget(
 def list_expenses(
     month: str | None = None,
     game_code: str | None = None,
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     current=Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -156,15 +158,24 @@ def list_expenses(
         where += " AND game_code = ?"
         params.append(code)
 
+    total = db.execute(
+        f"SELECT COUNT(*) AS n FROM expenses WHERE {where}", params
+    ).fetchone()["n"]
     rows = db.execute(
         f"""
         SELECT * FROM expenses
         WHERE {where}
         ORDER BY spent_on DESC, id DESC
+        LIMIT ? OFFSET ?
         """,
-        params,
+        [*params, limit, offset],
     ).fetchall()
-    return {"items": [_expense_row(row) for row in rows], "total": len(rows)}
+    return {
+        "items": [_expense_row(row) for row in rows],
+        "total": int(total),
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.post("/expenses", status_code=201)

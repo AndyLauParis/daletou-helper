@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 
 import pytest
 from fastapi.testclient import TestClient
 
 from helper import config
+from helper.api import games as games_api
 from helper.games import cache, registry
-from helper_app import app
+from helper_app import ROUTER_MODULES, app
 
 EXPECTED_ORDER = [
     "dlt",
@@ -38,8 +40,10 @@ CATALOG_CODES = {"jczq", "jclq", "dgg", "ggl"}
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "helper.db"))
     monkeypatch.setattr(cache, "CACHE_DIR", tmp_path / "cache")
+    games_api.reset_refresh_state()
     with TestClient(app) as test_client:
         yield test_client
+    games_api.reset_refresh_state()
 
 
 def make_draw(issue: str, date: str, marker: str | None = None) -> dict:
@@ -314,6 +318,8 @@ def test_refresh_failure_keeps_old_cache(client, monkeypatch):
     assert after["updated_at"] == before["updated_at"]
     assert [draw["issue"] for draw in after["draws"]] == ["26002", "26001"]
 
+    # 手动刷新有 30 秒节流；这里清理节流状态以验证 draws?refresh=true 的降级路径
+    games_api.reset_refresh_state()
     fallback = client.get("/api/helper/games/dlt/draws", params={"refresh": "true"})
     assert fallback.status_code == 200
     fallback_body = fallback.json()
@@ -330,6 +336,55 @@ def test_check_without_cache_and_fetch_failure_returns_409(client, monkeypatch):
     )
     assert resp.status_code == 409
     assert resp.json()["detail"] == "暂无开奖数据，请稍后重试"
+
+
+def test_manual_refresh_is_throttled(client, monkeypatch):
+    """连续手动刷新只抓取一次，后续请求返回 busy 而不是继续冲击上游。"""
+    games_api.reset_refresh_state()
+    calls: list[int] = []
+
+    class CountingAdapter(FakeAdapter):
+        @staticmethod
+        def fetch_draws(limit: int = 30) -> list[dict]:
+            calls.append(limit)
+            return [make_draw(f"2613{len(calls)}", "2026-11-24")]
+
+    monkeypatch.setattr(registry, "get_adapter", lambda code: CountingAdapter)
+
+    first = client.post("/api/helper/games/dlt/refresh")
+    assert first.status_code == 200
+    assert first.json()["ok"] is True
+    assert len(calls) == 1
+
+    second = client.post("/api/helper/games/dlt/refresh")
+    assert second.status_code == 200
+    body = second.json()
+    assert body["ok"] is False
+    assert body["status"] == "busy"
+    assert "刷新过于频繁" in body["message"]
+    assert body["latest_issue"] == first.json()["latest_issue"]
+    assert len(calls) == 1
+
+
+def test_all_router_modules_exist():
+    for module_name in ROUTER_MODULES:
+        assert importlib.import_module(module_name) is not None
+
+
+def test_draws_reads_cache_only_once(client, monkeypatch):
+    cache.save_cache("dlt", [make_draw("26100", "2026-11-20")], "测试源")
+    calls: list[str] = []
+    original = cache.load_cache
+
+    def counting(code: str):
+        calls.append(code)
+        return original(code)
+
+    monkeypatch.setattr(cache, "load_cache", counting)
+    resp = client.get("/api/helper/games/dlt/draws")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    assert calls == ["dlt"]
 
 
 # ---------- 适配器成功路径 ----------

@@ -162,6 +162,39 @@ def test_create_and_list_expenses(client):
     ).status_code == 400
 
 
+def test_expense_list_pagination(client):
+    token = register(client)
+    for index in range(5):
+        assert add_expense(
+            client, token, amount=10 + index, spent_on=f"2026-11-{10 + index:02d}"
+        ).status_code == 201
+
+    first = client.get(
+        "/api/helper/expenses",
+        headers=auth_header(token),
+        params={"month": "2026-11", "limit": 2, "offset": 0},
+    ).json()
+    assert first["total"] == 5
+    assert first["limit"] == 2
+    assert first["offset"] == 0
+    assert [row["spent_on"] for row in first["items"]] == ["2026-11-14", "2026-11-13"]
+
+    last = client.get(
+        "/api/helper/expenses",
+        headers=auth_header(token),
+        params={"month": "2026-11", "limit": 2, "offset": 4},
+    ).json()
+    assert last["total"] == 5
+    assert [row["spent_on"] for row in last["items"]] == ["2026-11-10"]
+
+    assert client.get(
+        "/api/helper/expenses", headers=auth_header(token), params={"limit": 0}
+    ).status_code == 422
+    assert client.get(
+        "/api/helper/expenses", headers=auth_header(token), params={"limit": 501}
+    ).status_code == 422
+
+
 def test_delete_expense_only_own(client):
     token_a = register(client, "user_a")
     token_b = register(client, "user_b")

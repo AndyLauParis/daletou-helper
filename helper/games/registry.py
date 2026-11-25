@@ -291,7 +291,11 @@ def get_adapter(code: str):
         return None
     try:
         return importlib.import_module(meta.adapter_module)
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as exc:
+        if exc.name != meta.adapter_module:
+            logger.warning(
+                "适配器 %s 缺少依赖 %s", meta.adapter_module, exc.name
+            )
         return None
     except ImportError:
         logger.warning("加载 %s 适配器失败", meta.adapter_module, exc_info=True)

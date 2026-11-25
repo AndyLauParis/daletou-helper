@@ -30,7 +30,6 @@ ROUTER_MODULES = [
     "helper.api.records",
     "helper.api.budget",
     "helper.api.reminders",
-    "helper.api.check",
     "helper.api.data",
 ]
 
@@ -83,11 +82,20 @@ def _register_routers(application: FastAPI) -> None:
     for module_name in ROUTER_MODULES:
         try:
             module = importlib.import_module(module_name)
-        except ModuleNotFoundError:
-            continue
+        except ModuleNotFoundError as exc:
+            if exc.name == module_name:
+                logger.error(
+                    "路由模块 %s 不存在，请修正 ROUTER_MODULES", module_name
+                )
+            else:
+                logger.error(
+                    "路由模块 %s 缺少依赖 %s，请先安装依赖", module_name, exc.name
+                )
+            raise
         module_router = getattr(module, "router", None)
-        if module_router is not None:
-            application.include_router(module_router)
+        if module_router is None:
+            raise RuntimeError(f"路由模块 {module_name} 缺少 router 对象")
+        application.include_router(module_router)
 
 
 _register_routers(app)

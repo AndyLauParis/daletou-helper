@@ -26,6 +26,10 @@ router = APIRouter(prefix="/api/helper/numbers", tags=["helper-numbers"])
 # 单账号号码本上限
 MAX_RECORDS_PER_USER = 500
 
+# 单条记录的名称长度与 payload 序列化后的最大字节数
+MAX_NAME_LENGTH = 100
+MAX_PAYLOAD_BYTES = 16 * 1024
+
 
 class RecordCreate(BaseModel):
     game_code: str
@@ -47,11 +51,32 @@ def _require_game(code: str):
     return meta
 
 
+def _require_name(name: str | None) -> str:
+    value = (name or "").strip()
+    if len(value) > MAX_NAME_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"名称最多 {MAX_NAME_LENGTH} 个字符",
+        )
+    return value
+
+
 def _require_payload(payload: Any) -> dict:
     if not isinstance(payload, dict):
         raise HTTPException(
             status_code=400,
             detail="payload 需为 JSON 对象，例如 {\"text\": \"01 02 03\"}",
+        )
+    try:
+        encoded = json.dumps(payload, ensure_ascii=False)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400, detail="payload 需为可序列化为 JSON 的对象"
+        ) from exc
+    if len(encoded.encode("utf-8")) > MAX_PAYLOAD_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"payload 内容过大，最多 {MAX_PAYLOAD_BYTES // 1024} KB",
         )
     return payload
 
@@ -168,6 +193,7 @@ def create_record(
     user_id = current["id"]
     meta = _require_game(body.game_code)
     payload = _require_payload(body.payload)
+    name = _require_name(body.name)
     play_type = (body.play_type or "").strip() or None
     _validate_or_400(meta, payload, play_type)
 
@@ -190,7 +216,7 @@ def create_record(
         (
             user_id,
             meta.code,
-            (body.name or "").strip(),
+            name,
             play_type,
             json.dumps(payload, ensure_ascii=False),
             now,
@@ -222,7 +248,7 @@ def update_record(
     payload = None
 
     if "name" in provided:
-        name = (body.name or "").strip()
+        name = _require_name(body.name)
     if "play_type" in provided:
         play_type = (body.play_type or "").strip() or None
     if "payload" in provided:

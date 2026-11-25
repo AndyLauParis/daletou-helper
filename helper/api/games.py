@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -19,6 +21,12 @@ FETCH_LIMIT = 30
 
 # 缓存有效期（秒）
 CACHE_TTL_SECONDS = cache.DEFAULT_TTL_SECONDS
+
+# 同一游戏同时只允许一个抓取任务；全局最多 4 个上游抓取并发
+MAX_CONCURRENT_FETCHES = 4
+
+# 手动刷新（refresh=true 或 POST /refresh）的最小间隔（秒）
+MIN_REFRESH_INTERVAL_SECONDS = 30
 
 
 class CheckRequest(BaseModel):
@@ -69,6 +77,57 @@ def _fetch_and_save(meta: GameMeta, adapter) -> tuple[list[dict], dict | None]:
         status="ok",
     )
     return merged, saved
+
+
+_refresh_locks: dict[str, threading.Lock] = {}
+_refresh_guard = threading.Lock()
+_last_refresh_at: dict[str, float] = {}
+_fetch_slots = threading.BoundedSemaphore(MAX_CONCURRENT_FETCHES)
+
+
+class RefreshBusy(Exception):
+    """当前无法立即开始抓取：正在刷新、过于频繁或并发已满。"""
+
+
+def _game_lock(code: str) -> threading.Lock:
+    with _refresh_guard:
+        lock = _refresh_locks.get(code)
+        if lock is None:
+            lock = threading.Lock()
+            _refresh_locks[code] = lock
+        return lock
+
+
+def reset_refresh_state() -> None:
+    """清空手动刷新节流状态（供测试使用）。"""
+    with _refresh_guard:
+        _last_refresh_at.clear()
+
+
+def _fetch_with_guard(meta: GameMeta, adapter, *, explicit: bool):
+    """带互斥、频率与并发上限的抓取；拿不到资源时立即失败，不占线程排队。"""
+    lock = _game_lock(meta.code)
+    if not lock.acquire(blocking=False):
+        raise RefreshBusy("该游戏正在更新，请稍后重试")
+    try:
+        if explicit:
+            now = time.monotonic()
+            with _refresh_guard:
+                last = _last_refresh_at.get(meta.code, 0.0)
+            if now - last < MIN_REFRESH_INTERVAL_SECONDS:
+                wait = int(MIN_REFRESH_INTERVAL_SECONDS - (now - last)) + 1
+                raise RefreshBusy(f"刷新过于频繁，请 {wait} 秒后再试")
+        if not _fetch_slots.acquire(blocking=False):
+            raise RefreshBusy("当前更新任务较多，请稍后重试")
+        try:
+            if explicit:
+                with _refresh_guard:
+                    _last_refresh_at[meta.code] = time.monotonic()
+            return _fetch_and_save(meta, adapter)
+        finally:
+            _fetch_slots.release()
+    finally:
+        lock.release()
 
 
 @router.get("/games")
@@ -127,11 +186,13 @@ def game_draws(
         return _empty_draws_response(meta, "unavailable", "开奖数据接入中")
 
     payload = cache.load_cache(meta.code)
-    if not refresh and cache.is_fresh(meta, CACHE_TTL_SECONDS):
+    if not refresh and cache.is_fresh_payload(payload, CACHE_TTL_SECONDS):
         return _draws_response(meta, payload, "ok", limit, None)
 
     try:
-        merged, saved = _fetch_and_save(meta, adapter)
+        merged, saved = _fetch_with_guard(meta, adapter, explicit=refresh)
+    except RefreshBusy as exc:
+        return _draws_response(meta, payload, "busy", limit, str(exc))
     except Exception as exc:  # 单个游戏抓取失败不影响其他游戏
         logger.warning("抓取 %s 开奖数据失败：%s", meta.code, exc)
         if payload.get("draws"):
@@ -187,7 +248,16 @@ def refresh_game(code: str):
 
     old = cache.load_cache(meta.code)
     try:
-        merged, saved = _fetch_and_save(meta, adapter)
+        merged, saved = _fetch_with_guard(meta, adapter, explicit=True)
+    except RefreshBusy as exc:
+        latest = old["draws"][0] if old.get("draws") else None
+        return {
+            "ok": False,
+            "status": "busy",
+            "message": str(exc),
+            "updated_at": old.get("updated_at"),
+            "latest_issue": latest.get("issue") if latest else None,
+        }
     except Exception as exc:
         logger.warning("刷新 %s 开奖数据失败：%s", meta.code, exc)
         latest = old["draws"][0] if old.get("draws") else None
@@ -232,7 +302,11 @@ def check_ticket(body: CheckRequest):
     payload = cache.load_cache(meta.code)
     if not payload.get("draws"):
         try:
-            merged, saved = _fetch_and_save(meta, adapter)
+            merged, saved = _fetch_with_guard(meta, adapter, explicit=False)
+        except RefreshBusy as exc:
+            raise HTTPException(
+                status_code=503, detail="开奖数据正在更新，请稍后重试"
+            ) from exc
         except Exception as exc:
             logger.warning("核对前抓取 %s 开奖数据失败：%s", meta.code, exc)
             merged, saved = [], None
