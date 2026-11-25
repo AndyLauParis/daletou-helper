@@ -265,12 +265,16 @@
       "</div>";
   }
 
-  function loadDraws() {
+  function loadDraws(options) {
+    var silent = Boolean(options && options.silent);
     if (!currentCode) return Promise.resolve();
+    if (silent && loading) return Promise.resolve();
     loading = true;
-    hideError();
-    root.innerHTML = '<div class="empty">正在加载开奖数据…</div>';
-    setStatus("正在加载开奖数据…");
+    if (!silent) {
+      hideError();
+      root.innerHTML = '<div class="empty">正在加载开奖数据…</div>';
+      setStatus("正在加载开奖数据…");
+    }
 
     return api(
       "/api/helper/games/" +
@@ -279,6 +283,7 @@
     )
       .then(render)
       .catch(function (err) {
+        if (silent) return;
         root.innerHTML = '<div class="empty">开奖数据加载失败。</div>';
         setStatus("加载失败");
         showError(err && err.message ? err.message : "加载开奖数据失败，请稍后重试");
@@ -382,5 +387,30 @@
     }
   });
 
+  var autoRefreshTimer = null;
+
+  function startAutoRefresh() {
+    if (autoRefreshTimer) return;
+    autoRefreshTimer = window.setInterval(function () {
+      if (document.visibilityState === "visible") {
+        loadDraws({ silent: true });
+      }
+    }, 60000);
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      loadDraws({ silent: true });
+    }
+  });
+
+  window.addEventListener("pagehide", function () {
+    if (autoRefreshTimer) {
+      window.clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
+  });
+
   loadGames();
+  startAutoRefresh();
 })();

@@ -366,6 +366,19 @@ def test_manual_refresh_is_throttled(client, monkeypatch):
     assert len(calls) == 1
 
 
+def test_fetch_prefers_refresh_draws():
+    class Adapter:
+        @staticmethod
+        def fetch_draws(limit: int = 30):
+            return [{"issue": "old"}]
+
+        @staticmethod
+        def refresh_draws(limit: int = 30):
+            return [{"issue": "new"}]
+
+    assert games_api._fetch(Adapter)[0]["issue"] == "new"
+
+
 def test_all_router_modules_exist():
     for module_name in ROUTER_MODULES:
         assert importlib.import_module(module_name) is not None

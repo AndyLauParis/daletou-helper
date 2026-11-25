@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 from core import store as core_store
 from core.rules import tier_for_hits
+
+logger = logging.getLogger("helper.games.dlt")
 
 SOURCE_NAME = "国家体彩中心 / 500.com"
 
@@ -214,3 +217,15 @@ def fetch_draws(limit: int = 30) -> list[dict]:
 
     draws.sort(key=lambda draw: (draw["date"], draw["issue"]), reverse=True)
     return draws[: max(0, int(limit))]
+
+
+def refresh_draws(limit: int = 30) -> list[dict]:
+    """先刷新 core.store 的开奖缓存，再返回最近开奖。
+
+    网络失败时回退到 core.store 已有数据，由上层决定是否继续使用旧缓存。
+    """
+    try:
+        core_store.refresh()
+    except Exception:
+        logger.warning("刷新大乐透开奖数据失败，使用 core.store 已有数据", exc_info=True)
+    return fetch_draws(limit=limit)

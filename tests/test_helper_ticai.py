@@ -213,6 +213,39 @@ def test_dlt_fetch_raises_when_core_fails(monkeypatch):
         dlt.fetch_draws()
 
 
+def test_dlt_refresh_draws_updates_core_before_reading(monkeypatch):
+    calls = []
+
+    def fake_refresh():
+        calls.append("refresh")
+        return {"added": 1}
+
+    monkeypatch.setattr(core_store, "refresh", fake_refresh)
+    monkeypatch.setattr(core_store, "ensure_data", lambda: {})
+    monkeypatch.setattr(
+        core_store, "get_draws", lambda: [dict(draw) for draw in CORE_DRAWS]
+    )
+
+    draws = dlt.refresh_draws(limit=2)
+    assert calls == ["refresh"]
+    assert len(draws) == 2
+
+
+def test_dlt_refresh_draws_falls_back_when_refresh_fails(monkeypatch):
+    monkeypatch.setattr(
+        core_store,
+        "refresh",
+        lambda: (_ for _ in ()).throw(RuntimeError("offline")),
+    )
+    monkeypatch.setattr(core_store, "ensure_data", lambda: {})
+    monkeypatch.setattr(
+        core_store, "get_draws", lambda: [dict(draw) for draw in CORE_DRAWS]
+    )
+
+    draws = dlt.refresh_draws(limit=1)
+    assert len(draws) == 1
+
+
 def test_dlt_reuses_core_rules():
     assert dlt.tier_for_hits is core_rules.tier_for_hits
 

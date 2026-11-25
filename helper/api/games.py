@@ -56,8 +56,13 @@ def _source_of(meta: GameMeta, adapter) -> str | None:
 
 
 def _fetch(adapter) -> list[dict]:
-    """调用适配器抓取开奖数据，并校验返回类型。"""
-    draws = adapter.fetch_draws(limit=FETCH_LIMIT)
+    """调用适配器抓取开奖数据，并校验返回类型。
+
+    适配器提供 refresh_draws 时优先使用，便于复用外部模块（如大乐透 core.store）
+    时先刷新数据源再读取。
+    """
+    fetch = getattr(adapter, "refresh_draws", None) or adapter.fetch_draws
+    draws = fetch(limit=FETCH_LIMIT)
     if not isinstance(draws, list):
         raise ValueError("适配器返回格式异常")
     return draws

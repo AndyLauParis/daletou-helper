@@ -52,7 +52,25 @@ async def lifespan(app: FastAPI):
         )
     except Exception:
         logger.warning("现有开奖数据初始化失败，不影响账号与记录功能", exc_info=True)
-    yield
+
+    watcher = None
+    try:
+        from helper.draw_watcher import start_draw_watcher
+
+        watcher = start_draw_watcher()
+    except Exception:
+        logger.warning("开奖自动更新启动失败，不影响手动刷新", exc_info=True)
+
+    try:
+        yield
+    finally:
+        if watcher is not None:
+            try:
+                from helper.draw_watcher import stop_draw_watcher
+
+                stop_draw_watcher()
+            except Exception:
+                logger.warning("开奖自动更新停止失败", exc_info=True)
 
 
 app = FastAPI(title=config.APP_TITLE, lifespan=lifespan)
