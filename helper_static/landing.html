@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="全国彩票购彩辅助工具：记录号码、管理购彩预算、查询官方开奖结果并设置开奖提醒，不代购、不支付、不出票。">
+  <title>全国彩票购彩辅助工具 · 记录、预算与开奖查询</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/theme.js"></script>
+</head>
+<body class="landing-page">
+  <div id="site-nav"></div>
+
+  <main>
+    <section class="landing-hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="hero-eyebrow">合规购彩辅助工具 · 18+</p>
+          <h1 class="hero-title">记录、预算与开奖查询，<br>一个工具就够了</h1>
+          <p class="hero-lead">保存号码、管理预算、查询开奖并设置提醒。工具只做记录与查询，不代购、不支付、不出票，也不承诺中奖。</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="/register" data-guest-only>免费注册</a>
+            <a class="btn btn-ghost btn-lg" href="/login" data-guest-only>登录</a>
+            <a class="btn btn-primary btn-lg" href="/app" data-auth-only hidden>进入工作台</a>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <span class="stat-value">16 款</span>
+              <span class="stat-label">体彩与福彩游戏目录</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">8 项</span>
+              <span class="stat-label">记录、统计与娱乐工具</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">0 交易</span>
+              <span class="stat-label">不代购 · 不支付 · 不出票</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="draw-preview-card">
+            <div class="draw-card-head">
+              <strong>大乐透</strong>
+              <span>界面示意 · 非实时数据</span>
+            </div>
+            <p class="draw-card-note">以下号码仅用于展示界面排版，不是真实开奖结果。</p>
+            <div class="number-group">
+              <span class="number-label">前区</span>
+              <div class="balls hero-balls">
+                <span class="ball ball-front">05</span>
+                <span class="ball ball-front">12</span>
+                <span class="ball ball-front">19</span>
+                <span class="ball ball-front">27</span>
+                <span class="ball ball-front">33</span>
+              </div>
+            </div>
+            <div class="number-group">
+              <span class="number-label">后区</span>
+              <div class="balls hero-balls">
+                <span class="ball ball-back">03</span>
+                <span class="ball ball-back">08</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">一个工具，覆盖购彩记录的每个环节</h2>
+        <p class="section-lead">从查看游戏规则到核对开奖号码，全部围绕记录与查询展开。</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <div class="feature-icon">01</div>
+          <h3 class="feature-title">游戏目录</h3>
+          <p class="feature-desc">浏览体彩与福彩各游戏的玩法摘要、开奖节奏与数据接入状态。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">02</div>
+          <h3 class="feature-title">号码本</h3>
+          <p class="feature-desc">按游戏保存你选好的号码或投注内容，仅作记录，不代购。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">03</div>
+          <h3 class="feature-title">预算与支出</h3>
+          <p class="feature-desc">设置月度预算，记录实际支出，并按游戏查看汇总。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">04</div>
+          <h3 class="feature-title">开奖查询</h3>
+          <p class="feature-desc">按游戏查询官方开奖号码或赛果，可手动刷新缓存。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">05</div>
+          <h3 class="feature-title">兑奖核对</h3>
+          <p class="feature-desc">手动输入号码或赛果，按官方奖级规则核对是否中奖。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon">06</div>
+          <h3 class="feature-title">开奖提醒</h3>
+          <p class="feature-desc">按游戏开奖节奏设置提前提醒，避免错过开奖时间。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">最新开奖</h2>
+        <p class="section-lead">读取已接入游戏的最近一期开奖，数据以官方发布为准。</p>
+      </div>
+      <div class="preview-grid" id="draw-preview">
+        <div class="preview-card preview-empty">正在加载最新开奖数据…</div>
+      </div>
+      <p class="preview-note">开奖信息来自官方渠道的公开数据，仅供核对参考；如与官方公告不一致，以官方发布为准。</p>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">除了记录，还可以这样使用</h2>
+        <p class="section-lead">两个独立工具，分别用于理解历史样本和生成娱乐号码组合。</p>
+      </div>
+      <div class="tool-panels">
+        <article class="tool-panel">
+          <p class="hero-eyebrow">历史数据实验室</p>
+          <h3 class="section-title">看看历史开奖到底能说明什么</h3>
+          <p class="section-lead">号码频率、遗漏、和值分布、随机性检验与预算模拟，全部基于已缓存的历史样本。它能帮你识别“规律错觉”，但不能预测下一期。</p>
+          <a class="link-arrow" href="/lab">打开数据实验室</a>
+        </article>
+        <article class="tool-panel">
+          <p class="hero-eyebrow">娱乐选号工具</p>
+          <h3 class="section-title">按一种组合规则，生成一组娱乐号码</h3>
+          <p class="section-lead">纯随机、冷热号、遗漏周期、奇偶均衡等 7 种组合规则，仅用于娱乐。所有方式都不预测开奖、不提高中奖概率，结果不构成购彩建议。</p>
+          <a class="link-arrow" href="/picker">打开娱乐选号</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="compliance-band">
+      <div class="compliance-inner">
+        <div class="compliance-item">
+          <strong>18+</strong>
+          <span>未成年人不得购彩</span>
+        </div>
+        <div class="compliance-item">
+          <strong>不代购</strong>
+          <span>不支付、不出票、不代办任何购彩交易</span>
+        </div>
+        <div class="compliance-item">
+          <strong>不承诺中奖</strong>
+          <span>娱乐选号仅为组合规则，不构成购彩建议</span>
+        </div>
+        <div class="compliance-item">
+          <strong>以官方为准</strong>
+          <span>全部开奖数据以官方发布为准</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="cta-inner">
+        <h2 class="section-title">开始记录你的购彩预算与号码</h2>
+        <p class="section-lead">免费注册后即可使用号码本、预算管理、开奖查询与提醒。</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="/register" data-guest-only>免费注册</a>
+          <a class="btn btn-ghost btn-lg" href="/login" data-guest-only>登录</a>
+          <a class="btn btn-primary btn-lg" href="/app" data-auth-only hidden>进入工作台</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/landing.js"></script>
+</body>
+</html>

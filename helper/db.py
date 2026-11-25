@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -61,6 +62,19 @@ CREATE TABLE IF NOT EXISTS reminder_settings (
     updated_at TEXT NOT NULL,
     UNIQUE(user_id, game_code)
 );
+
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    content TEXT NOT NULL,
+    screenshot_name TEXT,
+    screenshot_mime TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_user_id
+    ON feedback(user_id, id DESC);
 """
 
 
@@ -82,6 +96,17 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _restrict_permissions(path: Path) -> None:
+    """收紧数据库文件权限，失败时不影响启动。
+
+    目录权限由部署步骤统一设置，避免误改共享父目录。
+    """
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
 def init_db() -> None:
     conn = connect()
     try:
@@ -89,6 +114,7 @@ def init_db() -> None:
         conn.commit()
     finally:
         conn.close()
+    _restrict_permissions(db_path())
 
 
 def get_db():

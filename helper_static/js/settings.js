@@ -96,7 +96,7 @@
       })
     })
       .then(function () {
-        clearToken();
+        setLoggedIn(false);
         passwordStatus.textContent = "密码已修改，请使用新密码重新登录…";
         passwordStatus.hidden = false;
         setTimeout(function () {
@@ -186,7 +186,7 @@
       body: JSON.stringify({ password: password, confirm: "DELETE" })
     })
       .then(function () {
-        clearToken();
+        setLoggedIn(false);
         accountName.textContent = "账号已删除";
         window.confirm("账号及全部数据已删除，即将返回注册页。");
         window.location.href = "/register";

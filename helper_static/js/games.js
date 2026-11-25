@@ -68,10 +68,10 @@
     var actions = "";
     if (game.support_level === "full") {
       actions =
-        '<a class="btn btn-ghost btn-sm" href="/static/draws.html?game=' +
+        '<a class="btn btn-primary btn-sm" href="/static/draws.html?game=' +
         code +
         '">查看开奖</a>' +
-        '<a class="btn btn-primary btn-sm" href="/static/check.html?game=' +
+        '<a class="btn btn-ghost btn-sm" href="/static/check.html?game=' +
         code +
         '">核对</a>';
     } else {

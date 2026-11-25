@@ -3,18 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>登录 · 全国彩票购彩辅助工具</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/theme.js"></script>
 </head>
-<body>
+<body class="auth-page">
   <div id="site-nav"></div>
 
-  <main class="page">
-    <div class="container narrow">
-      <section class="card auth-card">
-        <h1 class="page-title">账号登录</h1>
-        <p class="page-lead">登录后可同步号码本、预算与提醒设置。所有数据仅用于记录与查询。</p>
+  <main class="auth-shell">
+    <aside class="auth-aside">
+      <p><strong>全国彩票购彩辅助工具</strong></p>
+      <h2 class="auth-aside-title">记录号码，管理预算，查询开奖</h2>
+      <p>把自选号码、购彩预算和开奖结果集中在一处，省去分散记录与手动比对的麻烦。</p>
+      <ul class="auth-aside-list">
+        <li>仅提供记录、查询与提醒，不代购、不支付、不出票</li>
+        <li>开奖与奖池数据以官方发布为准</li>
+        <li>18+ 理性购彩，量力而行</li>
+      </ul>
+    </aside>
+
+    <div class="auth-main">
+      <section class="auth-card">
+        <p class="auth-brand">全国彩票购彩辅助工具</p>
+        <h1 class="auth-title">账号登录</h1>
+        <p class="auth-lead">登录后可同步号码本、预算与提醒设置。所有数据仅用于记录与查询。</p>
 
         <form id="login-form" novalidate>
           <div class="field">
@@ -41,47 +54,6 @@
   <div id="site-footer"></div>
 
   <script src="/static/js/common.js"></script>
-  <script>
-    (function () {
-      mountShell("");
-
-      var form = document.getElementById("login-form");
-      var errorBox = document.getElementById("form-error");
-      var submitBtn = document.getElementById("submit-btn");
-
-      function showError(message) {
-        errorBox.textContent = message;
-        errorBox.hidden = false;
-      }
-
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        errorBox.hidden = true;
-
-        var username = document.getElementById("username").value.trim();
-        var password = document.getElementById("password").value;
-
-        if (!username || !password) {
-          showError("请输入用户名和密码");
-          return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = "登录中…";
-        try {
-          var data = await api("/api/helper/auth/login", {
-            method: "POST",
-            body: JSON.stringify({ username: username, password: password })
-          });
-          setToken(data.token);
-          window.location.href = "/";
-        } catch (err) {
-          showError(err.message || "登录失败，请稍后重试");
-          submitBtn.disabled = false;
-          submitBtn.textContent = "登录";
-        }
-      });
-    })();
-  </script>
+  <script src="/static/js/login.js"></script>
 </body>
 </html>

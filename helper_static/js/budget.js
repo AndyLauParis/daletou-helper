@@ -174,6 +174,9 @@
       (Number(data.entry_count) || 0) +
       "</p></div>" +
       "</div>" +
+      '<div class="progress-head"><span>预算使用</span><strong>' +
+      percent.toFixed(0) +
+      "%</strong></div>" +
       '<div class="progress-track"><div class="progress-bar' +
       (danger ? " danger" : "") +
       '" style="width:' +

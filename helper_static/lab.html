@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="历史数据实验室：查看开奖号码频率、形态分布、随机性检验与预算模拟。所有结果仅描述历史样本，不预测开奖。">
+  <title>历史数据实验室 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <header class="lab-head">
+        <p class="hero-eyebrow">历史数据实验室 · 只读公开开奖数据</p>
+        <h1 class="page-title">用统计审视历史，而不是预测未来</h1>
+        <p class="page-lead">把已缓存的开奖数据摊开看：号码频率、遗漏、和值形态、随机性检验、选号方式回测和预算模拟。所有数字只描述过去，不能提高下一期的中奖概率。</p>
+        <div class="badges">
+          <span class="badge">18+</span>
+          <span class="badge badge-muted">不预测号码</span>
+          <span class="badge badge-muted">不推荐号码</span>
+          <span class="badge badge-muted">不代购 · 不出票</span>
+        </div>
+      </header>
+
+      <div class="notice notice-info">
+        <strong>先看结论：</strong>彩票每期开奖是独立随机事件。历史频率、冷热号、遗漏值与随机性检验都不能预测下一期结果；下面的统计只用于理解样本形态和识别常见的“规律错觉”。
+      </div>
+
+      <section class="card">
+        <div class="toolbar">
+          <div class="field">
+            <label for="lab-game">游戏</label>
+            <select id="lab-game" aria-describedby="lab-status">
+              <option value="">正在读取游戏…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="lab-window">样本范围</label>
+            <select id="lab-window">
+              <option value="30">最近 30 期</option>
+              <option value="60">最近 60 期</option>
+              <option value="100" selected>最近 100 期</option>
+              <option value="200">最近 200 期</option>
+            </select>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="btn btn-primary" id="lab-run">运行分析</button>
+            <button type="button" class="btn btn-ghost" id="lab-refresh">更新开奖数据</button>
+          </div>
+        </div>
+        <p class="meta-line" id="lab-status">正在读取可分析的游戏…</p>
+        <p class="hint">样本范围超过可用缓存时，会自动按实际可用期数计算。“更新开奖数据”会访问官方数据源，可能需要几秒钟。</p>
+        <div class="form-error" id="lab-error" role="alert" hidden></div>
+      </section>
+
+      <div class="empty" id="lab-empty">选择游戏与样本范围后，点击“运行分析”。</div>
+
+      <div id="lab-result" hidden>
+        <div class="stat-grid" id="lab-summary"></div>
+
+        <section class="card lab-ai" id="ai-card">
+          <div class="lab-ai-head">
+            <div class="lab-ai-copy">
+              <h2 class="section-title">AI 辅助解读</h2>
+              <p class="muted small">让模型把本页统计翻译成通俗解释。只解释历史数据，不预测、不推荐号码。</p>
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn btn-primary" id="ai-run">生成解读</button>
+            </div>
+          </div>
+          <p class="hint" id="ai-status">需要登录后使用；生成会消耗模型额度，按账号限流。</p>
+          <p class="hint">生成时仅把本页统计摘要发送给站点配置的大模型接口，不包含账号信息、号码本或个人预算记录。</p>
+          <p class="hint" id="ai-login" hidden>当前未登录，<a href="/login">去登录</a>后再回来生成。</p>
+          <div class="form-error" id="ai-error" role="alert" hidden></div>
+          <div class="lab-ai-output" id="ai-output" aria-live="polite" hidden></div>
+          <p class="hint" id="ai-meta" hidden></p>
+          <p class="hint" id="ai-notice" hidden></p>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">最近开奖</h2>
+          <p class="muted small">最近 10 期，含和值、跨度、奇数个数与相邻期重号。开奖数据以官方发布为准。</p>
+          <div class="draw-list" id="recent-root"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">号码频率与遗漏</h2>
+          <p class="muted small">频次是号码在样本期内出现的次数；遗漏是距上次出现已过去的期数。期望频率 = 每组每期选号个数 ÷ 号码池大小。</p>
+          <div id="frequency-root"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">形态分布</h2>
+          <p class="muted small">和值、跨度、奇数个数、分区分布与相邻期重号。所有“理论值”只在完全随机假设下成立。</p>
+          <div id="shape-root"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">随机性检验（蒙特卡洛）</h2>
+          <p class="muted small" id="tests-method"></p>
+          <div class="lab-tests" id="tests-root"></div>
+          <p class="hint" id="tests-note"></p>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">选号策略回测</h2>
+          <p class="muted small">用每期之前的样本分别按“追热号”“选冷号”“随机选号”生成一注，再与当期开奖核对命中个数。</p>
+          <div class="lab-strategy-list" id="backtest-list"></div>
+          <div class="lab-chart" id="backtest-chart"></div>
+          <p class="hint" id="backtest-note"></p>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">预算与亏损模拟</h2>
+          <p class="muted small">假设每期购买若干注、连续购买若干期，每注号码随机生成。模拟只计入官方固定奖级，不含浮动奖与追加投注，用于观察长期投入的亏损分布。</p>
+          <div class="toolbar">
+            <div class="field">
+              <label for="budget-periods">连续期数</label>
+              <input id="budget-periods" type="number" min="1" max="520" step="1" value="100" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="budget-tickets">每期注数</label>
+              <input id="budget-tickets" type="number" min="1" max="20" step="1" value="1" inputmode="numeric">
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn btn-primary" id="budget-run">运行模拟</button>
+            </div>
+          </div>
+          <div class="form-error" id="budget-error" role="alert" hidden></div>
+          <div class="empty" id="budget-unsupported" hidden>当前游戏的奖级规则暂未纳入预算模拟，仅支持大乐透与双色球。</div>
+          <div id="budget-result" hidden>
+            <div class="stat-grid" id="budget-summary"></div>
+            <div class="lab-chart">
+              <h3>返奖占投入的比例分布</h3>
+              <div class="lab-hist" id="budget-distribution"></div>
+            </div>
+            <p class="hint">净支出分位（元，负值表示投入大于固定奖返奖）</p>
+            <div class="lab-percentiles" id="budget-percentiles"></div>
+            <p class="hint" id="budget-note"></p>
+          </div>
+        </section>
+
+        <div class="notice">
+          <strong>风险提示：</strong>以上全部内容仅为历史样本的统计描述，不构成任何投注建议，也不能提高中奖概率。请量力而行，通过官方线下渠道购彩；未成年人不得购彩。
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/lab.js"></script>
+</body>
+</html>

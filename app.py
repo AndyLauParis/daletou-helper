@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core import store
+from security_layer import client_ip, install_security
 from core.constants import (
     ANY_PRIZE_COMBOS,
     ANY_PRIZE_RATE,
@@ -39,6 +42,26 @@ INDEX_FILE = STATIC_DIR / "index.html"
 
 NOT_READY = "module not ready"
 
+# 刷新开奖数据属于管理操作：配置 LAB_ADMIN_TOKEN 后必须携带 X-Admin-Token；
+# 未配置时仅允许“直连本机且 Host 为本机地址”的请求（防止反向代理把公网请求
+# 以 127.0.0.1 身份转发进来）。
+_ADMIN_TOKEN = os.environ.get("LAB_ADMIN_TOKEN", "").strip()
+_LOOPBACK_IPS = {"127.0.0.1", "::1", "testclient"}
+_LOCAL_HOSTNAMES = {"127.0.0.1", "localhost", "::1", "testserver"}
+_FORWARDED_HEADERS = (
+    "x-forwarded-for",
+    "x-real-ip",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+)
+
+# 生产环境默认关闭 /docs 与 /openapi.json；需要调试时设置 LAB_ENABLE_DOCS=1
+_DOCS_ENABLED = os.environ.get("LAB_ENABLE_DOCS", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,38 +73,45 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="大乐透三大模型数学验证实验室", lifespan=lifespan)
+app = FastAPI(
+    title="大乐透三大模型数学验证实验室",
+    lifespan=lifespan,
+    docs_url="/docs" if _DOCS_ENABLED else None,
+    redoc_url="/redoc" if _DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if _DOCS_ENABLED else None,
+)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR), check_dir=False), name="static")
+install_security(app, app_name="lab")
 
 
 class Model1Request(BaseModel):
-    jackpot: float = 5_000_000
-    second_prize: float = 100_000
-    pool: float | None = None
-    price: float = 2.0
-    mode: str = "rules"
+    jackpot: float = Field(default=5_000_000, ge=0, le=1_000_000_000)
+    second_prize: float = Field(default=100_000, ge=0, le=1_000_000_000)
+    pool: float | None = Field(default=None, ge=0, le=1_000_000_000_000)
+    price: float = Field(default=2.0, ge=0, le=1000)
+    mode: str = Field(default="rules", max_length=16)
 
 
 class Model2Request(BaseModel):
-    jackpot: float = 5_000_000
-    second_prize: float = 100_000
-    pool: float | None = None
-    tickets_per_sec: float = 1.0
+    jackpot: float = Field(default=5_000_000, ge=0, le=1_000_000_000)
+    second_prize: float = Field(default=100_000, ge=0, le=1_000_000_000)
+    pool: float | None = Field(default=None, ge=0, le=1_000_000_000_000)
+    tickets_per_sec: float = Field(default=1.0, ge=0, le=1_000_000)
 
 
 class Model3Request(BaseModel):
-    base_bet: float = 2
-    multiplier: float = 2
-    bankroll: float = 10000
-    rounds: int = 100
-    simulations: int = 1000
-    p_win: float = 0.0667
-    seed: int = 42
+    base_bet: float = Field(default=2, ge=0, le=1_000_000)
+    multiplier: float = Field(default=2, ge=1, le=100)
+    bankroll: float = Field(default=10000, ge=0, le=1_000_000_000)
+    rounds: int = Field(default=100, ge=1, le=1000)
+    simulations: int = Field(default=1000, ge=1, le=5000)
+    p_win: float = Field(default=0.0667, ge=0, le=1)
+    seed: int = Field(default=42, ge=0, le=2**31 - 1)
 
 
 class HistoryRequest(BaseModel):
-    window: int | None = None
-    periods: int = 300
+    window: int | None = Field(default=None, ge=1, le=2000)
+    periods: int = Field(default=300, ge=1, le=2000)
 
 
 def _latest_pool() -> int:
@@ -119,8 +149,37 @@ def health():
     return store.get_status()
 
 
+def _is_local_request(request: Request) -> bool:
+    if client_ip(request) not in _LOOPBACK_IPS:
+        return False
+    if any(request.headers.get(name) for name in _FORWARDED_HEADERS):
+        return False
+    host = request.headers.get("host", "").strip().lower()
+    try:
+        hostname = urlsplit(f"//{host}").hostname or ""
+    except ValueError:
+        return False
+    return hostname in _LOCAL_HOSTNAMES
+
+
+def _require_admin(request: Request) -> None:
+    if _ADMIN_TOKEN:
+        provided = request.headers.get("x-admin-token", "")
+        if not hmac.compare_digest(
+            provided.encode("utf-8"), _ADMIN_TOKEN.encode("utf-8")
+        ):
+            raise HTTPException(status_code=403, detail="无权刷新数据")
+        return
+    if not _is_local_request(request):
+        raise HTTPException(
+            status_code=403,
+            detail="刷新接口仅允许本机访问，请在服务端配置 LAB_ADMIN_TOKEN",
+        )
+
+
 @app.post("/api/data/refresh")
-def refresh_data():
+def refresh_data(request: Request):
+    _require_admin(request)
     try:
         return store.refresh()
     except Exception as exc:
@@ -128,12 +187,15 @@ def refresh_data():
 
 
 @app.get("/api/draws")
-def draws(limit: int = 100):
+def draws(limit: int = Query(default=100, ge=1, le=1000)):
     return {"draws": store.get_draws()[:limit]}
 
 
 @app.get("/api/rules")
-def rules(pool: float | None = None, mode: str = "rules"):
+def rules(
+    pool: float | None = Query(default=None, ge=0, le=1_000_000_000_000),
+    mode: str = Query(default="rules", max_length=16),
+):
     rules_module = _require_module("core.rules")
     get_rule_table = getattr(rules_module, "get_rule_table", None)
     if get_rule_table is None:
@@ -231,4 +293,11 @@ def history_test(req: HistoryRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("PORT", "8000")))
+    uvicorn.run(
+        app,
+        host=os.environ.get("LAB_HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", "8000")),
+        proxy_headers=True,
+        forwarded_allow_ips=os.environ.get("LAB_FORWARDED_ALLOW_IPS", "127.0.0.1"),
+        server_header=False,
+    )

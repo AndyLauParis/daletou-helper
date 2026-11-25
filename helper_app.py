@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from helper import config
 from helper.db import init_db
+from security_layer import install_security
 
 logger = logging.getLogger("helper")
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,17 @@ ROUTER_MODULES = [
     "helper.api.budget",
     "helper.api.reminders",
     "helper.api.data",
+    "helper.api.lab",
+    "helper.api.picker",
+    "helper.api.feedback",
 ]
+
+# 生产环境默认关闭 /docs 与 /openapi.json；需要调试时设置 HELPER_ENABLE_DOCS=1
+_DOCS_ENABLED = os.environ.get("HELPER_ENABLE_DOCS", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 
 @asynccontextmanager
@@ -73,7 +84,13 @@ async def lifespan(app: FastAPI):
                 logger.warning("开奖自动更新停止失败", exc_info=True)
 
 
-app = FastAPI(title=config.APP_TITLE, lifespan=lifespan)
+app = FastAPI(
+    title=config.APP_TITLE,
+    lifespan=lifespan,
+    docs_url="/docs" if _DOCS_ENABLED else None,
+    redoc_url="/redoc" if _DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if _DOCS_ENABLED else None,
+)
 
 _cors_origins = [
     origin.strip()
@@ -88,6 +105,8 @@ if _cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+install_security(app, app_name="helper")
 
 app.mount(
     "/static",
@@ -128,7 +147,22 @@ def _page(filename: str) -> FileResponse:
 
 @app.get("/")
 def index():
+    return _page("landing.html")
+
+
+@app.get("/app")
+def app_page():
     return _page("index.html")
+
+
+@app.get("/lab")
+def lab_page():
+    return _page("lab.html")
+
+
+@app.get("/picker")
+def picker_page():
+    return _page("picker.html")
 
 
 @app.get("/login")
@@ -147,4 +181,11 @@ def health():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8100)
+    uvicorn.run(
+        app,
+        host=os.environ.get("HELPER_HOST", "127.0.0.1"),
+        port=int(os.environ.get("HELPER_PORT", "8100")),
+        proxy_headers=True,
+        forwarded_allow_ips=os.environ.get("HELPER_FORWARDED_ALLOW_IPS", "127.0.0.1"),
+        server_header=False,
+    )

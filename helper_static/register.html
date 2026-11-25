@@ -3,18 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>注册 · 全国彩票购彩辅助工具</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/theme.js"></script>
 </head>
-<body>
+<body class="auth-page">
   <div id="site-nav"></div>
 
-  <main class="page">
-    <div class="container narrow">
-      <section class="card auth-card">
-        <h1 class="page-title">创建账号</h1>
-        <p class="page-lead">仅需用户名与密码，不收集真实姓名、身份证、手机号或银行卡信息。</p>
+  <main class="auth-shell">
+    <aside class="auth-aside">
+      <p><strong>全国彩票购彩辅助工具</strong></p>
+      <h2 class="auth-aside-title">免费注册后可以做什么</h2>
+      <p>注册只需用户名与密码，不收集真实姓名、身份证、手机号或银行卡信息。</p>
+      <ul class="auth-aside-list">
+        <li>建立专属号码本，长期跟踪自选号码</li>
+        <li>设置购彩预算与提醒，控制支出节奏</li>
+        <li>自动核对官方开奖，省去手动比对</li>
+      </ul>
+    </aside>
+
+    <div class="auth-main">
+      <section class="auth-card">
+        <p class="auth-brand">全国彩票购彩辅助工具</p>
+        <h1 class="auth-title">创建账号</h1>
+        <p class="auth-lead">仅需用户名与密码，不收集真实姓名、身份证、手机号或银行卡信息。</p>
 
         <form id="register-form" novalidate>
           <div class="field">
@@ -33,6 +46,13 @@
             <label for="password2">确认密码</label>
             <input id="password2" name="password2" type="password"
                    autocomplete="new-password" maxlength="128" required>
+          </div>
+
+          <div class="field">
+            <label for="invite-code">邀请码（可选）</label>
+            <input id="invite-code" name="invite_code" type="text"
+                   autocomplete="off" spellcheck="false" maxlength="128">
+            <p class="muted small">站点启用邀请注册时请填写管理员提供的邀请码，开放注册时可留空。</p>
           </div>
 
           <div class="field">
@@ -55,66 +75,6 @@
   <div id="site-footer"></div>
 
   <script src="/static/js/common.js"></script>
-  <script>
-    (function () {
-      mountShell("");
-
-      var form = document.getElementById("register-form");
-      var errorBox = document.getElementById("form-error");
-      var submitBtn = document.getElementById("submit-btn");
-      var usernameRe = /^[A-Za-z0-9_\u4e00-\u9fa5]{3,32}$/;
-
-      function showError(message) {
-        errorBox.textContent = message;
-        errorBox.hidden = false;
-      }
-
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        errorBox.hidden = true;
-
-        var username = document.getElementById("username").value.trim();
-        var password = document.getElementById("password").value;
-        var password2 = document.getElementById("password2").value;
-        var isAdult = document.getElementById("is-adult").checked;
-
-        if (!usernameRe.test(username)) {
-          showError("用户名需为 3–32 位字母、数字、下划线或中文");
-          return;
-        }
-        if (password.length < 8 || password.length > 128) {
-          showError("密码长度需为 8–128 位");
-          return;
-        }
-        if (password !== password2) {
-          showError("两次输入的密码不一致");
-          return;
-        }
-        if (!isAdult) {
-          showError("请先勾选“我已满 18 周岁并已阅读合规声明”");
-          return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = "注册中…";
-        try {
-          var data = await api("/api/helper/auth/register", {
-            method: "POST",
-            body: JSON.stringify({
-              username: username,
-              password: password,
-              is_adult: true
-            })
-          });
-          setToken(data.token);
-          window.location.href = "/";
-        } catch (err) {
-          showError(err.message || "注册失败，请稍后重试");
-          submitBtn.disabled = false;
-          submitBtn.textContent = "注册并登录";
-        }
-      });
-    })();
-  </script>
+  <script src="/static/js/register.js"></script>
 </body>
 </html>

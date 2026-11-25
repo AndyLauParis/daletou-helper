@@ -1,0 +1,36 @@
+[Unit]
+Description=Lottery Helper (FastAPI, 127.0.0.1:8100)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=helper
+Group=helper
+WorkingDirectory=/opt/helper
+EnvironmentFile=/etc/helper/helper.env
+ExecStart=/opt/helper/.venv/bin/python -m uvicorn helper_app:app \
+    --host 127.0.0.1 --port 8100 \
+    --proxy-headers --forwarded-allow-ips=127.0.0.1 \
+    --no-server-header --no-date-header
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+ReadWritePaths=/opt/helper/data
+
+[Install]
+WantedBy=multi-user.target

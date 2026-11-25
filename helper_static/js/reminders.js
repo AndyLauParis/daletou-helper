@@ -63,7 +63,7 @@
       '<label class="check-inline">提前 <input class="lead-input" type="number" min="5" max="180" step="1" data-role="lead" value="' +
       Number(item.lead_minutes) +
       '"> 分钟</label>' +
-      '<button class="btn btn-primary btn-sm" type="button" data-action="save">保存</button>' +
+      '<button class="btn btn-sm" type="button" data-action="save">保存</button>' +
       '<span class="muted small" data-role="status"></span>' +
       "</div>" +
       "</article>"

@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>隐私政策 · 全国彩票购彩辅助工具</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/theme.js"></script>
 </head>
 <body>
   <div id="site-nav"></div>
 
   <main class="page">
-    <div class="container">
+    <div class="container legal-container">
       <h1 class="page-title">隐私政策</h1>
       <p class="page-lead">本政策说明本工具收集哪些数据、如何使用与保存，以及你可以如何导出或删除数据。</p>
 
@@ -30,6 +31,7 @@
           <li>提供号码记录、开奖查询、手动核对、预算管理与开奖提醒功能。</li>
           <li>验证登录状态、保护账号安全、限制异常登录尝试。</li>
           <li>生成你主动发起的数据导出文件。</li>
+          <li><strong>AI 辅助解读：</strong>仅当你主动点击生成时，当前页面的历史统计摘要（开奖号码统计与预算模拟结果）会发送到站点配置的大模型接口；不包含用户名、号码本、个人预算或支出记录，生成结果按统计参数缓存且不关联账号。</li>
         </ul>
         <p>我们不会将你的数据用于广告投放或营销推送，也不会向任何第三方出售、出租或交易你的个人信息。</p>
 
@@ -72,8 +74,6 @@
   <div id="site-footer"></div>
 
   <script src="/static/js/common.js"></script>
-  <script>
-    mountShell("");
-  </script>
+  <script src="/static/js/shell.js"></script>
 </body>
 </html>

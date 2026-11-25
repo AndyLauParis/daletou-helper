@@ -81,8 +81,18 @@ python3 app.py
 | `HELPER_CACHE_DIR` | `data/cache` | 开奖数据缓存目录 |
 | `HELPER_CORS_ORIGINS` | 空 | 允许的跨域来源，逗号分隔；默认关闭 CORS |
 | `HELPER_DRAW_WATCH` | `1` | 设为 `0` 可关闭开奖后台自动更新 |
+| `HELPER_ALLOWED_HOSTS` | `localhost,127.0.0.1` | 允许的 Host（公网部署填真实域名） |
+| `HELPER_REQUIRE_HTTPS` | `0` | 设为 `1` 后 HTTP 请求 308 跳转 HTTPS |
+| `HELPER_TRUSTED_PROXIES` | `127.0.0.1,::1` | 受信反向代理，用于解析真实 IP |
+| `HELPER_SESSION_TTL_DAYS` | `7` | 会话有效期（天） |
+| `HELPER_REGISTRATION_MODE` | `open` | `open` / `invite` / `closed` |
+| `HELPER_INVITE_CODE` | 空 | `invite` 模式下的邀请码 |
+| `HELPER_RATE_GLOBAL_PER_MINUTE` | `600` | 单 IP 全局限流 |
+| `HELPER_RATE_AUTH_PER_MINUTE` | `30` | 登录/注册严格限流 |
+| `HELPER_RATE_EXPENSIVE_PER_MINUTE` | `60` | 抓取/重计算接口严格限流 |
+| `HELPER_MAX_BODY_BYTES` | `262144` | 请求体大小上限 |
 
-服务默认只监听 `127.0.0.1:8100`，不对局域网或公网开放。
+服务默认只监听 `127.0.0.1:8100`，不对局域网或公网开放。公网部署请按 [deploy/README.md](deploy/README.md) 配置 HTTPS、反向代理、限流与访问控制。
 
 ## 数据更新机制
 
@@ -116,11 +126,15 @@ data/                    运行时数据库与缓存（不提交 Git）
 ## 安全与隐私
 
 - 密码使用 scrypt 加盐哈希，数据库不保存明文密码。
-- 会话令牌由安全随机数生成，数据库只保存 SHA-256 摘要，默认 30 天过期。
-- 登录失败有限流；改密后旧会话全部失效。
+- 会话令牌由安全随机数生成，数据库只保存 SHA-256 摘要，默认 7 天过期。
+- 会话令牌保存在 `HttpOnly` + `SameSite=Lax` Cookie 中，前端 JavaScript 无法读取；HTTPS 下自动加 `Secure`。
+- 登录失败按“IP + 用户名”限流，并记录成功/失败审计日志；改密后旧会话全部失效。
+- 统一安全响应头：CSP、HSTS（HTTPS）、X-Frame-Options、X-Content-Type-Options 等。
+- 请求层防护：路径探测/扫描器拦截、危险方法拒绝、URL 与请求体大小限制、按 IP 滑动窗口限流。
+- 支持 `invite` / `closed` 注册模式，公网部署可关闭公开注册。
 - 导出数据不包含密码哈希、盐和会话令牌。
-- 无第三方统计、无外部 CDN，页面资源全部本地加载。
-- 仅监听本机回环地址；如需部署到公网，请自行增加 HTTPS、反向代理和访问控制。
+- 无第三方统计、无外部 CDN，页面资源全部本地加载，CSP 不依赖 `unsafe-inline` 脚本。
+- 仅监听本机回环地址；公网部署方式见 [deploy/README.md](deploy/README.md)。
 
 ## 免责声明
 

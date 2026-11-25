@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
+import hmac
+import logging
 import re
 import sqlite3
 import threading
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
+
+from security_layer import (
+    clear_session_cookie,
+    client_ip,
+    set_session_cookie,
+)
 
 from .. import config
 from ..db import get_db
-from ..deps import get_bearer_token, get_current_user
+from ..deps import get_current_user, get_session_token
+from ..feedback import delete_user_screenshots
 from ..security import (
     hash_password,
     hash_token,
@@ -21,6 +30,8 @@ from ..security import (
     utc_now_iso,
     verify_password,
 )
+
+logger = logging.getLogger("helper.auth")
 
 router = APIRouter(prefix="/api/helper/auth", tags=["helper-auth"])
 
@@ -41,6 +52,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     is_adult: bool = False
+    invite_code: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -74,8 +86,37 @@ def _validate_password(password: str) -> str:
     return password
 
 
+def _check_registration_allowed(payload: RegisterRequest, request: Request) -> None:
+    """按配置控制注册开放程度：open / invite / closed。"""
+    mode = config.REGISTRATION_MODE
+    if mode == "open":
+        return
+    if mode != "invite":
+        _audit("register_closed", request, payload.username)
+        raise HTTPException(status_code=403, detail="注册暂未开放")
+    expected = config.INVITE_CODE or ""
+    provided = payload.invite_code or ""
+    if not expected or not hmac.compare_digest(
+        provided.encode("utf-8"), expected.encode("utf-8")
+    ):
+        _audit("register_bad_invite", request, payload.username)
+        raise HTTPException(status_code=403, detail="邀请码无效")
+
+
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    return client_ip(request)
+
+
+def _audit(event: str, request: Request, username: str = "") -> None:
+    """安全审计日志：记录事件、客户端 IP 与用户名（过滤换行防日志注入）。"""
+    safe_user = (username or "").replace("\r", " ").replace("\n", " ")[:64]
+    logger.info(
+        "auth_event=%s ip=%s user=%s ua=%s",
+        event,
+        _client_ip(request),
+        safe_user or "-",
+        request.headers.get("user-agent", "-")[:120],
+    )
 
 
 def _prune(bucket: list[float], now: float) -> list[float]:
@@ -105,7 +146,7 @@ def check_login_rate_limit(key: tuple[str, str]) -> None:
     if limited:
         raise HTTPException(
             status_code=429,
-            detail="登录失败次数过多，请 5 分钟后再试",
+            detail="登录失败次数过多，请稍后再试",
         )
 
 
@@ -156,12 +197,18 @@ def _user_payload(row) -> dict:
 
 
 @router.post("/register", status_code=201)
-def register(payload: RegisterRequest, db=Depends(get_db)):
+def register(
+    payload: RegisterRequest,
+    request: Request,
+    response: Response,
+    db=Depends(get_db),
+):
     if not payload.is_adult:
         raise HTTPException(
             status_code=400,
             detail="请确认已年满 18 周岁并已阅读合规声明",
         )
+    _check_registration_allowed(payload, request)
     username = _validate_username(payload.username)
     password = _validate_password(payload.password)
 
@@ -187,20 +234,34 @@ def register(payload: RegisterRequest, db=Depends(get_db)):
 
     user_id = int(cursor.lastrowid)
     token = _issue_session(db, user_id)
+    set_session_cookie(
+        response, token, request, config.SESSION_TTL_DAYS * 24 * 60 * 60
+    )
+    _audit("register_ok", request, username)
     return {"token": token, "user": {"id": user_id, "username": username}}
 
 
 @router.post("/login")
-def login(payload: LoginRequest, request: Request, db=Depends(get_db)):
+def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    db=Depends(get_db),
+):
     username = (payload.username or "").strip()
     if not username or not payload.password:
         raise HTTPException(status_code=400, detail="请输入用户名和密码")
     if not USERNAME_RE.fullmatch(username):
         # 不合法的用户名不可能注册成功，直接拒绝且不写入失败计数
+        _audit("login_bad_username", request, username)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     key = (_client_ip(request), username)
-    check_login_rate_limit(key)
+    try:
+        check_login_rate_limit(key)
+    except HTTPException:
+        _audit("login_rate_limited", request, username)
+        raise
 
     row = db.execute(
         "SELECT id, username, password_hash, password_salt FROM users WHERE username = ?",
@@ -210,20 +271,28 @@ def login(payload: LoginRequest, request: Request, db=Depends(get_db)):
         # 用户不存在也走一次 scrypt，保持与真实用户相近的响应时间
         verify_password(payload.password, _DUMMY_PASSWORD_HASH, _DUMMY_PASSWORD_SALT)
         record_login_failure(key)
+        _audit("login_failed", request, username)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     if not verify_password(payload.password, row["password_hash"], row["password_salt"]):
         record_login_failure(key)
+        _audit("login_failed", request, username)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     clear_login_failures(key)
     token = _issue_session(db, int(row["id"]))
+    set_session_cookie(
+        response, token, request, config.SESSION_TTL_DAYS * 24 * 60 * 60
+    )
+    _audit("login_ok", request, username)
     return {"token": token, "user": _user_payload(row)}
 
 
 @router.post("/logout")
 def logout(
+    request: Request,
+    response: Response,
     current=Depends(get_current_user),
-    token: str = Depends(get_bearer_token),
+    token: str = Depends(get_session_token),
     db=Depends(get_db),
 ):
     db.execute(
@@ -231,6 +300,8 @@ def logout(
         (current["id"], hash_token(token)),
     )
     db.commit()
+    clear_session_cookie(response, request)
+    _audit("logout", request, current["username"])
     return {"ok": True}
 
 
@@ -242,6 +313,8 @@ def me(current=Depends(get_current_user)):
 @router.post("/change-password")
 def change_password(
     payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
     current=Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -253,6 +326,7 @@ def change_password(
     if row is None:
         raise HTTPException(status_code=401, detail="请先登录")
     if not verify_password(payload.old_password, row["password_hash"], row["password_salt"]):
+        _audit("change_password_failed", request, current["username"])
         raise HTTPException(status_code=400, detail="旧密码不正确")
 
     password_hash, salt_hex = hash_password(new_password)
@@ -262,12 +336,16 @@ def change_password(
     )
     db.execute("DELETE FROM sessions WHERE user_id = ?", (current["id"],))
     db.commit()
+    clear_session_cookie(response, request)
+    _audit("change_password_ok", request, current["username"])
     return {"ok": True, "reauth": True}
 
 
 @router.delete("/account")
 def delete_account(
     payload: DeleteAccountRequest,
+    request: Request,
+    response: Response,
     current=Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -280,8 +358,12 @@ def delete_account(
     if row is None:
         raise HTTPException(status_code=401, detail="请先登录")
     if not verify_password(payload.password, row["password_hash"], row["password_salt"]):
+        _audit("delete_account_failed", request, current["username"])
         raise HTTPException(status_code=403, detail="密码不正确")
 
+    delete_user_screenshots(db, current["id"])
     db.execute("DELETE FROM users WHERE id = ?", (current["id"],))
     db.commit()
+    clear_session_cookie(response, request)
+    _audit("delete_account_ok", request, current["username"])
     return {"ok": True}
