@@ -5,6 +5,7 @@
   /* 会话令牌由服务端 HttpOnly Cookie 保存，前端不再接触令牌。 */
   var LEGACY_TOKEN_KEY = "helper_token";
   var LOGIN_FLAG_KEY = "helper_logged_in";
+  var ADMIN_FLAG_KEY = "helper_is_admin";
   var LOGIN_PAGE = "/login";
 
   var NAV_ITEMS = [
@@ -18,7 +19,8 @@
     { key: "draws", label: "开奖核对", href: "/static/draws.html" },
     { key: "reminders", label: "提醒", href: "/static/reminders.html" },
     { key: "feedback", label: "意见反馈", href: "/static/feedback.html" },
-    { key: "settings", label: "设置", href: "/static/settings.html" }
+    { key: "settings", label: "设置", href: "/static/settings.html" },
+    { key: "admin", label: "管理", href: "/admin", admin: true }
   ];
 
   var COMPLIANCE_TEXT =
@@ -48,6 +50,27 @@
         localStorage.setItem(LOGIN_FLAG_KEY, "1");
       } else {
         localStorage.removeItem(LOGIN_FLAG_KEY);
+        localStorage.removeItem(ADMIN_FLAG_KEY);
+      }
+    } catch (err) {
+      /* 隐私模式下忽略写入失败 */
+    }
+  }
+
+  function isAdmin() {
+    try {
+      return localStorage.getItem(ADMIN_FLAG_KEY) === "1";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function setIsAdmin(value) {
+    try {
+      if (value) {
+        localStorage.setItem(ADMIN_FLAG_KEY, "1");
+      } else {
+        localStorage.removeItem(ADMIN_FLAG_KEY);
       }
     } catch (err) {
       /* 隐私模式下忽略写入失败 */
@@ -138,9 +161,11 @@
     }
 
     if (!response.ok) {
-      throw new Error(
+      var error = new Error(
         await readDetail(response, "请求失败（" + response.status + "）")
       );
+      error.status = response.status;
+      throw error;
     }
 
     if (response.status === 204) return null;
@@ -298,6 +323,7 @@
     if (
       path === "/login" ||
       path === "/register" ||
+      path === "/admin" ||
       path === "/static/favorites.html"
     ) {
       return null;
@@ -394,7 +420,9 @@
   function buildNav(active) {
     var loggedIn = isLoggedIn();
     var items = loggedIn
-      ? NAV_ITEMS
+      ? NAV_ITEMS.filter(function (item) {
+          return !item.admin || isAdmin();
+        })
       : NAV_ITEMS.filter(function (item) {
           return item.public === true;
         });
@@ -488,6 +516,8 @@
 
   window.isLoggedIn = isLoggedIn;
   window.setLoggedIn = setLoggedIn;
+  window.isAdmin = isAdmin;
+  window.setIsAdmin = setIsAdmin;
   window.api = api;
   window.mountShell = mountShell;
   window.escapeHtml = escapeHtml;

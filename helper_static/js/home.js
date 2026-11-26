@@ -24,6 +24,7 @@
     .then(function (data) {
       nameEl.textContent = (data && data.user && data.user.username) || "未知用户";
       setLoggedIn(true);
+      setIsAdmin(data && data.user && data.user.is_admin);
     })
     .catch(function (err) {
       nameEl.textContent = "未登录";

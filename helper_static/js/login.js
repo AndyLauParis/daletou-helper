@@ -28,11 +28,12 @@
     submitBtn.disabled = true;
     submitBtn.textContent = "登录中…";
     try {
-      await api("/api/helper/auth/login", {
+      var data = await api("/api/helper/auth/login", {
         method: "POST",
         body: JSON.stringify({ username: username, password: password })
       });
       setLoggedIn(true);
+      setIsAdmin(data && data.user && data.user.is_admin);
       window.location.href = "/app";
     } catch (err) {
       showError(err.message || "登录失败，请稍后重试");

@@ -193,7 +193,11 @@ def _issue_session(db: sqlite3.Connection, user_id: int) -> str:
 
 
 def _user_payload(row) -> dict:
-    return {"id": row["id"], "username": row["username"]}
+    return {
+        "id": row["id"],
+        "username": row["username"],
+        "is_admin": bool(row["is_admin"]),
+    }
 
 
 @router.post("/register", status_code=201)
@@ -238,7 +242,10 @@ def register(
         response, token, request, config.SESSION_TTL_DAYS * 24 * 60 * 60
     )
     _audit("register_ok", request, username)
-    return {"token": token, "user": {"id": user_id, "username": username}}
+    return {
+        "token": token,
+        "user": {"id": user_id, "username": username, "is_admin": False},
+    }
 
 
 @router.post("/login")
@@ -264,7 +271,10 @@ def login(
         raise
 
     row = db.execute(
-        "SELECT id, username, password_hash, password_salt FROM users WHERE username = ?",
+        """
+        SELECT id, username, password_hash, password_salt, is_admin
+        FROM users WHERE username = ?
+        """,
         (username,),
     ).fetchone()
     if row is None:

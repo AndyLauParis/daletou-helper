@@ -35,6 +35,7 @@ ROUTER_MODULES = [
     "helper.api.lab",
     "helper.api.picker",
     "helper.api.feedback",
+    "helper.api.admin",
 ]
 
 # 生产环境默认关闭 /docs 与 /openapi.json；需要调试时设置 HELPER_ENABLE_DOCS=1
@@ -173,6 +174,11 @@ def login_page():
 @app.get("/register")
 def register_page():
     return _page("register.html")
+
+
+@app.get("/admin")
+def admin_page():
+    return _page("admin.html")
 
 
 @app.get("/api/helper/health")

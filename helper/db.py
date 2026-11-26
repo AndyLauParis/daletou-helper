@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     password_salt TEXT NOT NULL,
     is_adult INTEGER NOT NULL DEFAULT 0,
+    is_admin INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
 
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS feedback (
     content TEXT NOT NULL,
     screenshot_name TEXT,
     screenshot_mime TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
     created_at TEXT NOT NULL
 );
 
@@ -107,10 +109,30 @@ def _restrict_permissions(path: Path) -> None:
         pass
 
 
+def _ensure_column(
+    conn: sqlite3.Connection, table: str, column: str, ddl: str
+) -> None:
+    """幂等补列：旧库升级时补齐新增字段。"""
+    columns = {
+        row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+    if column not in columns:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
 def init_db() -> None:
     conn = connect()
     try:
         conn.executescript(SCHEMA_SQL)
+        _ensure_column(
+            conn, "users", "is_admin", "is_admin INTEGER NOT NULL DEFAULT 0"
+        )
+        _ensure_column(
+            conn, "feedback", "status", "status TEXT NOT NULL DEFAULT 'open'"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status, id DESC)"
+        )
         conn.commit()
     finally:
         conn.close()

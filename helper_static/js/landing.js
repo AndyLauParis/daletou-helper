@@ -241,7 +241,9 @@
 
   async function init() {
     try {
-      await api("/api/helper/auth/me", { redirectOn401: false });
+      var me = await api("/api/helper/auth/me", { redirectOn401: false });
+      setLoggedIn(true);
+      setIsAdmin(me && me.user && me.user.is_admin);
       applyAuthState(true);
     } catch (err) {
       /* 未登录（或会话失效）：保持公开访客视图，不跳转 */

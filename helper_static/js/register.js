@@ -55,6 +55,7 @@
         body: JSON.stringify(payload)
       });
       setLoggedIn(true);
+      setIsAdmin(false);
       window.location.href = "/app";
     } catch (err) {
       showError(err.message || "注册失败，请稍后重试");

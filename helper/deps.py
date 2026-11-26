@@ -37,7 +37,7 @@ def get_current_user(
 ) -> dict:
     row = db.execute(
         """
-        SELECT u.id AS id, u.username AS username
+        SELECT u.id AS id, u.username AS username, u.is_admin AS is_admin
         FROM sessions s
         JOIN users u ON u.id = s.user_id
         WHERE s.token_hash = ? AND s.expires_at > ?
@@ -46,4 +46,15 @@ def get_current_user(
     ).fetchone()
     if row is None:
         raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
-    return {"id": row["id"], "username": row["username"]}
+    return {
+        "id": row["id"],
+        "username": row["username"],
+        "is_admin": bool(row["is_admin"]),
+    }
+
+
+def require_admin(current=Depends(get_current_user)) -> dict:
+    """管理员依赖：未登录 401，普通用户 403。"""
+    if not current.get("is_admin"):
+        raise HTTPException(status_code=403, detail="需要管理员权限")
+    return current
