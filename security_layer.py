@@ -586,6 +586,12 @@ class SecurityHeadersMiddleware:
                 content_type = headers.get("content-type", "")
                 if is_api or "text/html" in content_type:
                     headers["Cache-Control"] = "no-store"
+                elif path.startswith("/static/") and (
+                    "javascript" in content_type or "text/css" in content_type
+                ):
+                    # 允许缓存但必须回源校验（ETag/Last-Modified），
+                    # 避免发版后浏览器继续使用旧脚本导致前后端不一致。
+                    headers["Cache-Control"] = "no-cache"
                 if "server" in headers:
                     del headers["server"]
                 if "x-powered-by" in headers:

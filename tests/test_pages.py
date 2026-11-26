@@ -60,6 +60,13 @@ def test_landing_script_is_served(client):
     assert "draw-preview" in resp.text
 
 
+def test_static_scripts_require_revalidation(client):
+    """脚本必须回源校验，避免发版后浏览器继续使用旧 common.js。"""
+    resp = client.get("/static/js/common.js")
+    assert resp.status_code == 200
+    assert resp.headers.get("cache-control") == "no-cache"
+
+
 @pytest.mark.parametrize("script_name", ["login.js", "register.js"])
 def test_auth_scripts_redirect_to_app(script_name):
     """登录/注册成功后必须跳转工作台 /app，防止回退到落地页 /。"""
