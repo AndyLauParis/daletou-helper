@@ -95,7 +95,10 @@ EXPENSIVE_RATE_PATHS = frozenset(
 RATE_LIMIT_EXEMPT_PATHS = frozenset({"/api/helper/health"})
 
 # 反馈截图上传需要更大的请求体上限（业务层仍限制单图 5 MB）
-LARGE_BODY_PATHS = {"/api/helper/feedback": 6 * 1024 * 1024}
+LARGE_BODY_PATHS = {
+    "/api/helper/feedback": 6 * 1024 * 1024,
+    "/api/helper/recognition/scan": 9 * 1024 * 1024,
+}
 
 # 强制 HTTPS 时放行的本机探针路径
 HTTPS_REDIRECT_EXEMPT_PATHS = frozenset({"/api/helper/health"})

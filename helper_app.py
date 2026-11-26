@@ -35,6 +35,7 @@ ROUTER_MODULES = [
     "helper.api.lab",
     "helper.api.picker",
     "helper.api.feedback",
+    "helper.api.recognition",
     "helper.api.admin",
 ]
 
@@ -179,6 +180,11 @@ def register_page():
 @app.get("/admin")
 def admin_page():
     return _page("admin.html")
+
+
+@app.get("/recognition")
+def recognition_page():
+    return _page("recognition.html")
 
 
 @app.get("/api/helper/health")

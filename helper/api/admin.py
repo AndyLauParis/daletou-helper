@@ -107,6 +107,12 @@ def overview(
             "total": scalar("SELECT COUNT(*) FROM feedback"),
             "open": scalar("SELECT COUNT(*) FROM feedback WHERE status = 'open'"),
         },
+        "recognition": {
+            "total": scalar("SELECT COUNT(*) FROM recognition_records"),
+            "review": scalar(
+                "SELECT COUNT(*) FROM recognition_records WHERE status = 'review'"
+            ),
+        },
         "recent_users": [
             {
                 "id": row["id"],

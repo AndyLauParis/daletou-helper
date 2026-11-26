@@ -22,11 +22,22 @@ def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
     return value if value >= minimum else default
 
 
+def _env_float(name: str, default: float, *, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if minimum <= value <= maximum else default
+
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _load_llm_env() -> None:
-    """从项目根目录 .env 读取 HELPER_LLM_* 配置，已存在的环境变量优先。"""
+def _load_optional_env() -> None:
+    """从项目根目录 .env 读取 HELPER_LLM_* 与 HELPER_OCR_* 配置，环境变量优先。"""
     path = PROJECT_ROOT / ".env"
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -38,7 +49,7 @@ def _load_llm_env() -> None:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        if not key.startswith("HELPER_LLM_"):
+        if not key.startswith(("HELPER_LLM_", "HELPER_OCR_")):
             continue
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
@@ -46,7 +57,7 @@ def _load_llm_env() -> None:
         os.environ.setdefault(key, value)
 
 
-_load_llm_env()
+_load_optional_env()
 
 DB_PATH = os.environ.get("HELPER_DB_PATH") or str(PROJECT_ROOT / "data" / "helper.db")
 
@@ -74,5 +85,15 @@ LLM_TIMEOUT_SECONDS = _env_int("HELPER_LLM_TIMEOUT_SECONDS", 45)
 LLM_MAX_TOKENS = _env_int("HELPER_LLM_MAX_TOKENS", 900)
 LLM_RATE_LIMIT = _env_int("HELPER_LLM_RATE_LIMIT", 8)
 LLM_RATE_WINDOW_SECONDS = _env_int("HELPER_LLM_RATE_WINDOW_SECONDS", 600)
+
+# 票面识别（OpenAI 兼容视觉接口）。未单独配置时回退到 LLM 配置。
+OCR_BASE_URL = (os.environ.get("HELPER_OCR_BASE_URL") or LLM_BASE_URL).strip().rstrip("/")
+OCR_API_KEY = (os.environ.get("HELPER_OCR_API_KEY") or LLM_API_KEY).strip()
+OCR_MODEL = (os.environ.get("HELPER_OCR_MODEL") or LLM_MODEL).strip()
+OCR_PROVIDER = (os.environ.get("HELPER_OCR_PROVIDER") or LLM_PROVIDER).strip()
+OCR_TIMEOUT_SECONDS = _env_int("HELPER_OCR_TIMEOUT_SECONDS", 60)
+OCR_MAX_IMAGE_BYTES = _env_int("HELPER_OCR_MAX_IMAGE_BYTES", 8 * 1024 * 1024)
+# 低于该置信度（总体或任一字段）的识别结果标记为待人工审核。
+OCR_CONFIDENCE_THRESHOLD = _env_float("HELPER_OCR_CONFIDENCE_THRESHOLD", 0.8)
 
 APP_TITLE = "全国彩票购彩辅助工具"

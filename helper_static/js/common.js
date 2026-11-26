@@ -13,6 +13,7 @@
     { key: "games", label: "游戏目录", href: "/static/games.html", public: true },
     { key: "lab", label: "数据实验室", href: "/lab", public: true },
     { key: "picker", label: "娱乐选号", href: "/picker", public: true },
+    { key: "recognition", label: "票据识别", href: "/recognition" },
     { key: "favorites", label: "我的收藏", href: "/static/favorites.html" },
     { key: "numbers", label: "号码本", href: "/static/numbers.html" },
     { key: "budget", label: "预算", href: "/static/budget.html" },

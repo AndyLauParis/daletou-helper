@@ -77,6 +77,41 @@ CREATE TABLE IF NOT EXISTS feedback (
 
 CREATE INDEX IF NOT EXISTS idx_feedback_user_id
     ON feedback(user_id, id DESC);
+
+CREATE TABLE IF NOT EXISTS recognition_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL,
+    game_code TEXT NOT NULL,
+    issue TEXT NOT NULL,
+    play_type TEXT,
+    payload_json TEXT NOT NULL,
+    numbers_text TEXT NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0,
+    field_confidence_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'valid',
+    anomaly_reason TEXT NOT NULL DEFAULT '',
+    review_note TEXT NOT NULL DEFAULT '',
+    reviewed INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL DEFAULT 'ocr',
+    ticket_no TEXT,
+    raw_text TEXT NOT NULL DEFAULT '',
+    seen_count INTEGER NOT NULL DEFAULT 1,
+    revision INTEGER NOT NULL DEFAULT 1,
+    recognized_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(user_id, fingerprint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_recognition_user_time
+    ON recognition_records(user_id, recognized_at DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_recognition_user_issue
+    ON recognition_records(user_id, game_code, issue, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_recognition_user_status
+    ON recognition_records(user_id, status, id DESC);
 """
 
 

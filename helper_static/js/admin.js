@@ -65,6 +65,7 @@
     var users = data.users || {};
     var expenses = data.expenses || {};
     var feedback = data.feedback || {};
+    var recognition = data.recognition || {};
     var tiles = [
       { label: "注册用户", value: users.total },
       { label: "今日新增用户", value: users.today },
@@ -73,7 +74,8 @@
       { label: "支出总额", value: fmtMoney(expenses.total) },
       { label: "本月支出", value: fmtMoney(expenses.month) },
       { label: "启用中的提醒", value: data.reminders_enabled },
-      { label: "待处理反馈", value: (feedback.open || 0) + " / " + (feedback.total || 0) }
+      { label: "待处理反馈", value: (feedback.open || 0) + " / " + (feedback.total || 0) },
+      { label: "识别记录（待审核）", value: (recognition.review || 0) + " / " + (recognition.total || 0) }
     ];
     statsEl.innerHTML = tiles
       .map(function (tile) {

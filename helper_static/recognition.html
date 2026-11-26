@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="上传彩票照片识别兑奖号码，自动校验、去重并积累到个人号码库，支持查询、统计与导出。">
+  <title>票据识别 · 全国彩票购彩辅助工具</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=20261126">
+  <script src="/static/js/theme.js?v=20261126"></script>
+</head>
+<body>
+  <div id="site-nav"></div>
+
+  <main class="page">
+    <div class="container">
+      <section class="page-head">
+        <p class="hero-eyebrow">票据识别</p>
+        <h1 class="page-title">上传彩票，自动积累兑奖号码</h1>
+        <p class="page-lead">
+          识别结果会自动校验、去重并保存到你的号码积累库；置信度低于阈值的记录
+          会标记为待人工审核，你可以在这里复核、导出或重新校验。
+        </p>
+      </section>
+
+      <p class="notice notice-info" id="ocr-status">识别服务状态加载中…</p>
+
+      <div class="feedback-layout">
+        <section class="card">
+          <h2 class="section-title">识别单张彩票</h2>
+          <div class="field">
+            <label for="recognition-game">彩票类型</label>
+            <select id="recognition-game">
+              <option value="">自动识别</option>
+            </select>
+            <p class="hint">选择类型可提高识别准确率；留空则由识别服务自动判断。</p>
+          </div>
+          <div class="field">
+            <label for="recognition-issue">期号（可选）</label>
+            <input id="recognition-issue" type="text" inputmode="numeric" maxlength="12"
+              placeholder="例如 26135，填写后优先使用">
+          </div>
+
+          <div class="upload-zone" id="recognition-zone">
+            <label class="upload-pick" for="recognition-file">选择彩票照片</label>
+            <input id="recognition-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            <p class="hint">
+              支持 PNG、JPG、WebP，单张不超过 8 MB；请保证票面号码清晰、无反光，
+              不要上传身份证件或支付信息。
+            </p>
+          </div>
+          <div class="upload-preview" id="recognition-preview" hidden>
+            <img id="recognition-image" alt="彩票预览">
+            <div class="upload-preview-meta">
+              <p class="small" id="recognition-name"></p>
+              <button class="btn btn-ghost btn-sm" type="button" id="recognition-remove">移除图片</button>
+            </div>
+          </div>
+
+          <div class="form-error" id="recognition-error" role="alert" hidden></div>
+          <div class="row-actions">
+            <button class="btn btn-primary" type="button" id="recognition-submit">开始识别</button>
+          </div>
+
+          <div class="feedback-item" id="recognition-result" hidden>
+            <div class="feedback-item-head">
+              <span class="badge badge-soft" id="result-game"></span>
+              <span class="feedback-id" id="result-issue"></span>
+              <span class="badge" id="result-status"></span>
+            </div>
+            <p class="feedback-content" id="result-numbers"></p>
+            <p class="hint" id="result-meta"></p>
+            <p class="hint" id="result-reason" hidden></p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="fav-toolbar">
+            <div>
+              <h2 class="section-title">积累概览</h2>
+              <p class="hint">只统计当前账号的识别记录。</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" id="stats-refresh">刷新</button>
+          </div>
+          <div class="stat-grid" id="recognition-stats"></div>
+          <p class="hint" id="recognition-stats-note"></p>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="fav-toolbar">
+          <div>
+            <h2 class="section-title">积累记录</h2>
+            <p class="hint" id="records-summary">加载中…</p>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-ghost btn-sm" type="button" id="export-csv">导出 CSV</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="export-json">导出 JSON</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="revalidate-btn">重新校验</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="field">
+            <label for="filter-game">彩票类型</label>
+            <select id="filter-game"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label for="filter-issue">期号</label>
+            <input id="filter-issue" type="text" inputmode="numeric" maxlength="12" placeholder="全部">
+          </div>
+          <div class="field">
+            <label for="filter-status">状态</label>
+            <select id="filter-status">
+              <option value="">全部</option>
+              <option value="valid">有效</option>
+              <option value="review">待人工审核</option>
+              <option value="anomaly">异常</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filter-from">识别日期从</label>
+            <input id="filter-from" type="date">
+          </div>
+          <div class="field">
+            <label for="filter-to">识别日期到</label>
+            <input id="filter-to" type="date">
+          </div>
+          <div class="field">
+            <label for="filter-keyword">关键词</label>
+            <input id="filter-keyword" type="text" maxlength="60" placeholder="号码 / 期号 / 票号">
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-primary btn-sm" type="button" id="filter-apply">筛选</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="filter-reset">重置</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">期号</th>
+                <th scope="col">彩票类型</th>
+                <th scope="col">号码</th>
+                <th scope="col">置信度</th>
+                <th scope="col">状态</th>
+                <th scope="col">识别时间</th>
+                <th scope="col">次数</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody id="records-body"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="records-empty" hidden>
+          <p class="empty-title">还没有识别记录</p>
+          <p class="hint">上传一张彩票照片，识别成功后会自动出现在这里。</p>
+        </div>
+
+        <div class="fav-toolbar">
+          <p class="hint" id="records-page-info"></p>
+          <div class="row-actions">
+            <button class="btn btn-ghost btn-sm" type="button" id="records-prev">上一页</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="records-next">下一页</button>
+          </div>
+        </div>
+      </section>
+
+      <p class="hint">
+        识别与积累仅用于个人记录和兑奖核对参考，不构成兑奖凭证；本工具不代购、不出票、
+        不自动兑奖、不承诺中奖，请通过官方线下渠道兑奖。
+      </p>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="/static/js/common.js?v=20261126"></script>
+  <script src="/static/js/recognition.js?v=20261126"></script>
+</body>
+</html>
