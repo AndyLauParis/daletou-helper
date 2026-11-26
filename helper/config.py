@@ -87,6 +87,7 @@ LLM_RATE_LIMIT = _env_int("HELPER_LLM_RATE_LIMIT", 8)
 LLM_RATE_WINDOW_SECONDS = _env_int("HELPER_LLM_RATE_WINDOW_SECONDS", 600)
 
 # 票面识别（OpenAI 兼容视觉接口）。未单独配置时回退到 LLM 配置。
+OCR_MODE = (os.environ.get("HELPER_OCR_MODE") or "openai").strip().lower()
 OCR_BASE_URL = (os.environ.get("HELPER_OCR_BASE_URL") or LLM_BASE_URL).strip().rstrip("/")
 OCR_API_KEY = (os.environ.get("HELPER_OCR_API_KEY") or LLM_API_KEY).strip()
 OCR_MODEL = (os.environ.get("HELPER_OCR_MODEL") or LLM_MODEL).strip()

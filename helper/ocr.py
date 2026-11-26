@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
-from . import config
+from . import config, ticket_parse
 
 logger = logging.getLogger("helper.ocr")
 
@@ -81,6 +81,7 @@ def public_status() -> dict:
     """供前端展示，不包含密钥。"""
     return {
         "enabled": is_configured(),
+        "mode": config.OCR_MODE,
         "provider": config.OCR_PROVIDER,
         "model": config.OCR_MODEL if is_configured() else "",
         "threshold": config.OCR_CONFIDENCE_THRESHOLD,
@@ -96,6 +97,13 @@ def _endpoint(base_url: str) -> str:
     if base.endswith("/chat/completions"):
         return base
     return base + "/chat/completions"
+
+
+def _document_parse_endpoint(base_url: str) -> str:
+    base = (base_url or "").strip().rstrip("/")
+    if base.endswith("/document-parse"):
+        return base
+    return base + "/document-parse"
 
 
 def _error_for_status(status: int) -> str:
@@ -169,41 +177,9 @@ def _build_messages(game_hint: str | None) -> tuple[str, str]:
     return "\n".join(lines), user_text
 
 
-def recognize_ticket(
-    image_bytes: bytes, mime: str, game_hint: str | None = None
-) -> dict:
-    """调用视觉接口识别单张彩票；失败时抛出 OcrError。"""
-    if not is_configured():
-        raise OcrNotConfigured(
-            "票面识别服务尚未配置。请设置 HELPER_OCR_BASE_URL、HELPER_OCR_API_KEY "
-            "与 HELPER_OCR_MODEL（需支持图片输入）。"
-        )
-
-    parsed = urlsplit(config.OCR_BASE_URL)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        raise OcrNotConfigured("HELPER_OCR_BASE_URL 不是有效的 http(s) 地址")
-
-    hint = (game_hint or "").strip().lower() or None
-    system_text, user_text = _build_messages(hint)
-    data_url = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
-    payload = {
-        "model": config.OCR_MODEL,
-        "messages": [
-            {"role": "system", "content": system_text},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": user_text},
-                    {"type": "image_url", "image_url": {"url": data_url}},
-                ],
-            },
-        ],
-        "temperature": 0,
-        "max_tokens": 900,
-        "stream": False,
-    }
+def _post_json(url: str, payload: dict) -> dict:
     request = urllib.request.Request(
-        _endpoint(config.OCR_BASE_URL),
+        url,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         method="POST",
         headers={
@@ -224,11 +200,49 @@ def recognize_ticket(
         raise OcrError("无法连接票面识别服务，请稍后再试") from exc
 
     try:
-        body = json.loads(raw.decode("utf-8"))
+        return json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         logger.warning("票面识别返回内容不是合法 JSON")
         raise OcrError("识别服务返回格式异常") from exc
 
+
+def _ocr_text_from_response(data: dict) -> str:
+    """ModelBest/MiniCPM-OCR：优先按 blocks 顺序拼接，其次用 content。"""
+    blocks = (data.get("ocr") or {}).get("blocks") or []
+    contents = []
+    for block in sorted(
+        (block for block in blocks if isinstance(block, dict)),
+        key=lambda block: block.get("order", 0),
+    ):
+        text = block.get("content")
+        if isinstance(text, str) and text.strip():
+            contents.append(text.strip())
+    if contents:
+        return "\n".join(contents)
+    return _extract_text(data)
+
+
+def _recognize_openai(data_url: str, hint: str | None) -> dict:
+    system_text, user_text = _build_messages(hint)
+    body = _post_json(
+        _endpoint(config.OCR_BASE_URL),
+        {
+            "model": config.OCR_MODEL,
+            "messages": [
+                {"role": "system", "content": system_text},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_text},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                },
+            ],
+            "temperature": 0,
+            "max_tokens": 900,
+            "stream": False,
+        },
+    )
     result = _parse_json_object(_extract_text(body))
     game_code = str(result.get("game_code") or hint or "").strip().lower()
     if game_code not in OCR_GAMES:
@@ -245,7 +259,7 @@ def recognize_ticket(
         field_confidence = {}
 
     logger.info(
-        "票面识别完成：game=%s issue=%s confidence=%.2f",
+        "票面识别完成(openai)：game=%s issue=%s confidence=%.2f",
         game_code,
         str(result.get("issue") or "")[:16],
         _clamp(result.get("confidence")),
@@ -264,3 +278,54 @@ def recognize_ticket(
         "model": config.OCR_MODEL,
         "provider": config.OCR_PROVIDER,
     }
+
+
+def _recognize_modelbest(data_url: str, hint: str | None) -> dict:
+    body = _post_json(
+        _document_parse_endpoint(config.OCR_BASE_URL),
+        {
+            "model": config.OCR_MODEL,
+            "image": data_url,
+            "upright": True,
+            "recognize_seal": True,
+        },
+    )
+    text = _ocr_text_from_response(body)
+    try:
+        result = ticket_parse.parse_ticket_text(
+            text,
+            hint,
+            model=config.OCR_MODEL,
+            provider=config.OCR_PROVIDER,
+        )
+    except ticket_parse.TicketParseError as exc:
+        raise OcrError(str(exc)) from exc
+    logger.info(
+        "票面识别完成(modelbest)：game=%s issue=%s confidence=%.2f text_chars=%s",
+        result["game_code"],
+        str(result.get("issue") or "")[:16],
+        result["confidence"],
+        len(text),
+    )
+    return result
+
+
+def recognize_ticket(
+    image_bytes: bytes, mime: str, game_hint: str | None = None
+) -> dict:
+    """调用视觉接口识别单张彩票；失败时抛出 OcrError。"""
+    if not is_configured():
+        raise OcrNotConfigured(
+            "票面识别服务尚未配置。请设置 HELPER_OCR_BASE_URL、HELPER_OCR_API_KEY "
+            "与 HELPER_OCR_MODEL（需支持图片输入）。"
+        )
+
+    parsed = urlsplit(config.OCR_BASE_URL)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise OcrNotConfigured("HELPER_OCR_BASE_URL 不是有效的 http(s) 地址")
+
+    hint = (game_hint or "").strip().lower() or None
+    data_url = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+    if config.OCR_MODE in {"modelbest", "minicpm", "document_parse"}:
+        return _recognize_modelbest(data_url, hint)
+    return _recognize_openai(data_url, hint)
