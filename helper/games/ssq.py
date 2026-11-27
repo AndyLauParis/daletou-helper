@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.error
 import urllib.request
+
+from . import _datachart500
 
 SOURCE_NAME = "中国福利彩票官网"
 API_URL = "https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice"
@@ -94,7 +97,7 @@ def _parse_date(value) -> str:
     return match.group(1)
 
 
-def fetch_draws(limit: int = 30) -> list[dict]:
+def _fetch_official(limit: int = 30) -> list[dict]:
     """抓取最近若干期开奖，按日期、期号倒序返回；字段缺失时抛异常。"""
     data = _request_json(_build_url(limit))
     if data.get("state") != 0:
@@ -135,6 +138,55 @@ def fetch_draws(limit: int = 30) -> list[dict]:
 
     draws.sort(key=lambda draw: (draw["date"], draw["issue"]), reverse=True)
     return draws
+
+
+def _fetch_fallback(limit: int = 30) -> list[dict]:
+    draws: list[dict] = []
+    for cells in _datachart500.fetch_rows("ssq"):
+        found = _datachart500.row_issue(cells, r"\d{5}")
+        if found is None:
+            continue
+        index, raw_issue = found
+        date = _datachart500.row_date(cells)
+        numbers: list[int] = []
+        for cell in cells[index + 1 :]:
+            numbers.extend(int(token) for token in re.findall(r"(?<!\d)\d{2}(?!\d)", cell))
+            if len(numbers) >= _RED_COUNT + _BLUE_COUNT:
+                break
+        if date is None or len(numbers) < _RED_COUNT + _BLUE_COUNT:
+            continue
+        red = numbers[:_RED_COUNT]
+        blue = numbers[_RED_COUNT]
+        if len(set(red)) != _RED_COUNT or any(
+            number < 1 or number > _RED_MAX for number in red
+        ):
+            continue
+        if not 1 <= blue <= _BLUE_MAX:
+            continue
+        draws.append(
+            {
+                "issue": _datachart500.expand_issue(raw_issue),
+                "date": date,
+                "numbers": {"red": sorted(red), "blue": [blue]},
+                "extra": {"week": ""},
+            }
+        )
+        if len(draws) >= limit:
+            break
+    if not draws:
+        raise ValueError("500.com 备用源未返回可用的双色球数据")
+    draws.sort(key=lambda draw: (draw["date"], draw["issue"]), reverse=True)
+    return draws
+
+
+def fetch_draws(limit: int = 30) -> list[dict]:
+    try:
+        return _fetch_official(limit)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        try:
+            return _fetch_fallback(limit)
+        except Exception as fallback_exc:
+            raise ValueError(f"双色球开奖数据源不可用，备用源也失败：{fallback_exc}") from exc
 
 
 def _parse_text(text: str) -> tuple[list[int], list[int]]:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.error
 import urllib.request
 
 SOURCE_NAME = "中国福利彩票官网"
@@ -77,6 +78,69 @@ def _build_url(limit: int) -> str:
     return f"{API_URL}?name=kl8&issueCount={count}"
 
 
+KL8_PAGE_URL = "https://kaijiang.500.com/kl8.shtml"
+KL8_XML_URL = "https://kaijiang.500.com/static/info/kaijiang/xml/kl8/{issue}.xml"
+_ISSUE_LINK_RE = re.compile(r"/shtml/kl8/(\d{7})\.shtml")
+
+
+def _request_text(url: str) -> str:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": HEADERS["User-Agent"],
+            "Referer": "https://kaijiang.500.com/",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        return response.read().decode("gb18030", errors="replace")
+
+
+def _parse_500_xml(text: str) -> dict | None:
+    def tag(name: str) -> str:
+        match = re.search(rf"<{name}>([^<]+)</{name}>", text)
+        return match.group(1).strip() if match else ""
+
+    issue = tag("PeriodicalNum") or tag("PeriodicalNO")
+    result = tag("Result")
+    opened_at = tag("ResultTime") or tag("ResultDate")
+    numbers = [int(part) for part in re.split(r"[,\s]+", result) if part.isdigit()]
+    date_match = re.match(r"\d{4}-\d{2}-\d{2}", opened_at)
+    if (
+        not issue
+        or len(numbers) != _DRAW_COUNT
+        or len(set(numbers)) != _DRAW_COUNT
+        or date_match is None
+    ):
+        return None
+    if any(number < 1 or number > _NUMBER_MAX for number in numbers):
+        return None
+    return {
+        "issue": issue,
+        "date": date_match.group(0),
+        "numbers": {"draw": sorted(numbers)},
+        "extra": {"week": ""},
+    }
+
+
+def _fetch_fallback(limit: int = 30) -> list[dict]:
+    page = _request_text(KL8_PAGE_URL)
+    issues = list(dict.fromkeys(_ISSUE_LINK_RE.findall(page)))
+    draws: list[dict] = []
+    for issue in issues:
+        try:
+            draw = _parse_500_xml(_request_text(KL8_XML_URL.format(issue=issue)))
+        except (urllib.error.URLError, TimeoutError, OSError):
+            continue
+        if draw is not None:
+            draws.append(draw)
+        if len(draws) >= limit:
+            break
+    if not draws:
+        raise ValueError("500.com 备用源未返回可用的快乐8数据")
+    draws.sort(key=lambda draw: (draw["date"], draw["issue"]), reverse=True)
+    return draws
+
+
 def _request_json(url: str) -> dict:
     """发起一次 HTTP 请求并解析 JSON；测试通过 monkeypatch 本函数隔离网络。"""
     request = urllib.request.Request(url, headers=HEADERS)
@@ -114,7 +178,7 @@ def _parse_date(value) -> str:
     return match.group(1)
 
 
-def fetch_draws(limit: int = 30) -> list[dict]:
+def _fetch_official(limit: int = 30) -> list[dict]:
     """抓取最近若干期开奖，按日期、期号倒序返回；字段缺失时抛异常。"""
     data = _request_json(_build_url(limit))
     if data.get("state") != 0:
@@ -150,6 +214,16 @@ def fetch_draws(limit: int = 30) -> list[dict]:
 
     draws.sort(key=lambda draw: (draw["date"], draw["issue"]), reverse=True)
     return draws
+
+
+def fetch_draws(limit: int = 30) -> list[dict]:
+    try:
+        return _fetch_official(limit)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        try:
+            return _fetch_fallback(limit)
+        except Exception as fallback_exc:
+            raise ValueError(f"快乐8开奖数据源不可用，备用源也失败：{fallback_exc}") from exc
 
 
 def _extract_picks(payload) -> list[int]:
